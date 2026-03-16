@@ -30,11 +30,17 @@ st.markdown("""
 # --- 🚀 구글 시트 연동 설정 ---
 @st.cache_resource
 def get_google_sheet():
-    # token.json 출입증으로 구글 시트 접속
     scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
-    creds = Credentials.from_authorized_user_file('token.json', scopes)
+    
+    # 서버(Secrets)에 저장된 토큰 정보를 읽어옵니다.
+    # 만약 서버에 정보가 없다면 내 컴퓨터의 token.json을 읽습니다.
+    if "google_auth" in st.secrets:
+        token_info = json.loads(st.secrets["google_auth"]["token"])
+        creds = Credentials.from_authorized_user_info(token_info, scopes)
+    else:
+        creds = Credentials.from_authorized_user_file('token.json', scopes)
+        
     client = gspread.authorize(creds)
-    # 아까 만든 'couple_app_data' 시트의 첫 번째 탭(sheet1) 가져오기
     return client.open('couple_app_data').sheet1
 
 sheet = get_google_sheet()
