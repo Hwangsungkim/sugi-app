@@ -1,11 +1,11 @@
 import streamlit as st
 import datetime
 import pytz
-import pandas as pd
 import random
 import json
 import gspread
 from google.oauth2.credentials import Credentials
+# 불필요해진 pandas 라이브러리는 앱 속도 향상을 위해 삭제했습니다!
 
 # 1. 앱 기본 설정
 st.set_page_config(page_title="수기 커플 노트", page_icon="❤️", layout="centered")
@@ -16,28 +16,24 @@ now_kst = datetime.datetime.now(KST)
 today_str = str(now_kst.date())
 current_time_str = now_kst.strftime("%H:%M")
 
-# --- 🎨 안전한 감성 UI/UX 폰트 적용 ---
+# --- 🎨 감자꽃 폰트 및 공통 CSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Gamja+Flower&display=swap');
     
-    /* 레이아웃을 깨지 않고 안전하게 텍스트에만 '감자꽃' 폰트 적용 */
     html, body, p, h1, h2, h3, h4, h5, h6, span, label, button, input, textarea, select, div[data-testid="stMetricValue"] {
         font-family: 'Gamja Flower', sans-serif !important;
     }
     
-    /* 스트림릿 기본 아이콘 깨짐 방지 */
     .material-symbols-rounded, [data-testid="stIconMaterial"] {
         font-family: 'Material Symbols Rounded' !important;
     }
     
-    /* 공통 디자인 요소 (다크/라이트 모두 어울리게) */
     .card { background-color: rgba(128, 128, 128, 0.05); border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(128, 128, 128, 0.2); }
     .user-boy { border-left: 5px solid #4B89FF; text-align: left; }
     .user-girl { border-right: 5px solid #FF4B4B; text-align: right; }
     .time-text { font-size: 0.8rem; color: gray; }
     
-    /* 둥근 버튼 및 입력창 */
     div.stButton > button { border-radius: 20px; font-weight: bold; }
     div.stTextInput > div > div > input { border-radius: 10px; }
     </style>
@@ -137,39 +133,37 @@ if check_password():
     st.success(f"📢 {st.session_state.notice}")
 
     # ==========================================
-    # 📌 사이드바 & 접속자별 다이내믹 배경색 (최신 구조 반영)
+    # 📌 사이드바 & 확실한 파스텔 배경색 스위칭
     # ==========================================
     with st.sidebar:
         user_type = st.radio("👤 접속자", ["수기남자친구 👦", "수기 👧"])
         user_name_only = "수기남자친구" if "남자친구" in user_type else "수기"
         
         if user_name_only == "수기":
-            bg_color = "#FFF5F7" # 라이트 핑크
+            bg_color = "#FFF5F7" # 핑크
             accent_color = "#FF4B4B"
             user_icon = "👧"
         else:
-            bg_color = "#E3F2FD" # 라이트 블루
+            bg_color = "#E3F2FD" # 블루
             accent_color = "#4B89FF"
             user_icon = "👦"
 
-        # [원인 해결!] 가장 최상위 컨테이너(stAppViewContainer)까지 완벽히 타겟팅
+        # [핵심 수정!] 라이트 모드일 때 스트림릿 내부 테마 변수(:root)와 모든 내부 도화지(.main)를 강제로 덮어씌움
         st.markdown(f"""
             <style>
             @media (prefers-color-scheme: light) {{
-                /* 기본 .stApp 뿐만 아니라 흰색으로 덮어버리는 최상위 뷰 컨테이너까지 싹 다 배경색 변경 */
-                .stApp, [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"] {{
+                :root {{
+                    --background-color: {bg_color} !important;
+                    --secondary-background-color: {bg_color} !important;
+                }}
+                /* 겉면부터 가장 안쪽 알맹이(.main)까지 모조리 지정 */
+                .stApp, .main, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
                     background-color: {bg_color} !important;
                 }}
-                /* 상단 빈 공간(헤더)을 투명하게 만들어 배경색과 자연스럽게 이어지게 함 */
-                [data-testid="stHeader"] {{
-                    background-color: transparent !important;
-                }}
-                /* 사이드바는 메인 배경색 위에 살짝 하얀 필터를 씌워 입체감을 줌 */
                 [data-testid="stSidebar"] {{
-                    background-color: rgba(255, 255, 255, 0.6) !important;
+                    background-color: rgba(255, 255, 255, 0.7) !important;
                 }}
             }}
-            /* 메인 화면 강조 텍스트 색상 (디데이 등) */
             [data-testid="stMetricValue"] {{
                 color: {accent_color} !important;
             }}
@@ -259,6 +253,7 @@ if check_password():
         
         if st.button("기분 업데이트"):
             st.session_state.moods[user_name_only] = my_mood
+            # 기록 저장은 유지 (나중을 위해)
             today_record = next((item for item in st.session_state.mood_history if item["date"] == today_str), None)
             mood_score = {"😢": 1, "☁️": 2, "🙂": 3, "🥰": 4, "🔥": 5}
             
@@ -276,12 +271,7 @@ if check_password():
         st.write(f"👦 수기남자친구: {st.session_state.moods['수기남자친구']} ({mood_desc[st.session_state.moods['수기남자친구']]})")
         st.write(f"👧 수기: {st.session_state.moods['수기']} ({mood_desc[st.session_state.moods['수기']]})")
         
-        if st.session_state.mood_history:
-            st.write("📈 **최근 기분 변화 그래프**")
-            df_mood = pd.DataFrame(st.session_state.mood_history[-7:])
-            if not df_mood.empty:
-                df_mood.set_index('date', inplace=True)
-                st.line_chart(df_mood)
+        # 기분 그래프 표시 코드 완전 삭제 완료!
 
     # --- 탭 2: 쪽지함 ---
     with tabs[1]:
