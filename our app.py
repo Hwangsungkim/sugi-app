@@ -7,7 +7,7 @@ import json
 import gspread
 from google.oauth2.credentials import Credentials
 
-# 1. 앱 기본 설정
+# 1. 앱 기본 설정 (홈화면 추가 시 하트 아이콘이 잡히도록 설정)
 st.set_page_config(page_title="수기 커플 노트", page_icon="❤️", layout="centered")
 
 # --- 🌐 한국 시간(KST) 설정 ---
@@ -16,17 +16,21 @@ now_kst = datetime.datetime.now(KST)
 today_str = str(now_kst.date())
 current_time_str = now_kst.strftime("%H:%M")
 
-# --- 🎨 감성 UI/UX 및 다크모드 대응 CSS ---
+# --- 🎨 감성 UI/UX 및 아이콘 깨짐 방지 CSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap');
     
-    /* 폰트 적용 (단, 스트림릿 기본 아이콘 폰트는 깨지지 않게 예외 처리!) */
-    html, body, [class*="css"], [class*="st-"] { 
-        font-family: 'Gowun Dodum', sans-serif; 
+    /* 텍스트 요소들에만 부드럽게 폰트 적용 (!important를 제거하여 아이콘 충돌 방지) */
+    html, body, p, div, h1, h2, h3, h4, h5, h6, span, label, button, input, textarea, select {
+        font-family: 'Gowun Dodum', sans-serif;
     }
     
-    /* 다크모드/라이트모드 모두 어울리는 반투명 카드 디자인 */
+    /* 스트림릿 아이콘(Material Symbols) 강제 복구 및 보호 */
+    .material-symbols-rounded, [data-testid="stIconMaterial"], .st-emotion-cache-1r6slb6 {
+        font-family: 'Material Symbols Rounded' !important;
+    }
+    
     .card { background-color: rgba(128, 128, 128, 0.05); border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 2px 2px 10px rgba(0,0,0,0.05); border: 1px solid rgba(128, 128, 128, 0.1); }
     .user-boy { border-left: 5px solid #4B89FF; text-align: left; }
     .user-girl { border-right: 5px solid #FF4B4B; text-align: right; }
@@ -75,7 +79,7 @@ def load_data():
         "reviews": [],
         "menu_list": ["삼겹살", "초밥"],
         "date_schedules": []
-    } # 챌린지 데이터 삭제 완료
+    }
 
 def save_data():
     data_to_save = {
@@ -126,7 +130,7 @@ if check_password():
 
     # 상단 헤더 & 모바일 최적화 사이드바 안내
     col_h1, col_h2 = st.columns([0.85, 0.15])
-    col_h1.markdown(f"<h2 style='color: #ff4b4b;'>❤️ 수기 커플 노트 v2.1</h2>", unsafe_allow_html=True)
+    col_h1.markdown(f"<h2 style='color: #ff4b4b;'>❤️ 수기 커플 노트</h2>", unsafe_allow_html=True)
     if col_h2.button("🔄"):
         st.session_state.clear()
         st.rerun()
@@ -186,7 +190,7 @@ if check_password():
             st.rerun()
 
     # ==========================================
-    # 📌 메인 탭 구성 (탭 이름 개편)
+    # 📌 메인 탭 구성
     # ==========================================
     tabs = st.tabs(["💕 데이트", "💌 쪽지함", "📸 사진첩", "⏳ 타임라인", "😋 오늘 뭐 먹지?", "📍 장소/기록"])
 
@@ -312,7 +316,7 @@ if check_password():
         for item in st.session_state.timeline:
             st.markdown(f'<div class="card"><b>{item["date"]}</b> ({item.get("by", "")})<br>{item["event"]}</div>', unsafe_allow_html=True)
 
-    # --- 탭 5: 오늘 뭐 먹지? (구 랜덤/챌린지) ---
+    # --- 탭 5: 오늘 뭐 먹지? ---
     with tabs[4]:
         st.subheader("🎰 메뉴 돌림판")
         if st.button("메뉴 랜덤 뽑기! 🎲"):
@@ -327,7 +331,6 @@ if check_password():
                 st.rerun()
                 
         st.write("👇 **메뉴를 터치하면 수정/삭제할 수 있어요!**")
-        # [모바일 최적화] 메뉴 리스트 (서랍장 UX)
         for i, menu in enumerate(st.session_state.menu_list):
             with st.expander(f"🍽️ {menu}"):
                 edit_m = st.text_input(f"메뉴 이름 수정", value=menu, key=f"edit_m_{i}")
@@ -341,7 +344,7 @@ if check_password():
                     save_data()
                     st.rerun()
 
-    # --- 탭 6: 장소/기록 (위시리스트 + 리뷰 링크) ---
+    # --- 탭 6: 장소/기록 ---
     with tabs[5]:
         st.subheader("📍 우리의 위시리스트")
         with st.form("w_form", clear_on_submit=True):
@@ -352,7 +355,6 @@ if check_password():
                 st.rerun()
                 
         st.write("👇 **장소를 터치하여 방문 체크 및 관리하세요!**")
-        # [모바일 최적화] 위시리스트 (서랍장 UX)
         for i, w in enumerate(st.session_state.wishlist):
             if isinstance(w, str):
                 st.session_state.wishlist[i] = {"place": w, "visited": False, "by": "알수없음"}
