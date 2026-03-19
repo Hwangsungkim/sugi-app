@@ -5,7 +5,6 @@ import random
 import json
 import gspread
 from google.oauth2.credentials import Credentials
-# 불필요해진 pandas 라이브러리는 앱 속도 향상을 위해 삭제했습니다!
 
 # 1. 앱 기본 설정
 st.set_page_config(page_title="수기 커플 노트", page_icon="❤️", layout="centered")
@@ -15,29 +14,6 @@ KST = pytz.timezone('Asia/Seoul')
 now_kst = datetime.datetime.now(KST)
 today_str = str(now_kst.date())
 current_time_str = now_kst.strftime("%H:%M")
-
-# --- 🎨 감자꽃 폰트 및 공통 CSS ---
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Gamja+Flower&display=swap');
-    
-    html, body, p, h1, h2, h3, h4, h5, h6, span, label, button, input, textarea, select, div[data-testid="stMetricValue"] {
-        font-family: 'Gamja Flower', sans-serif !important;
-    }
-    
-    .material-symbols-rounded, [data-testid="stIconMaterial"] {
-        font-family: 'Material Symbols Rounded' !important;
-    }
-    
-    .card { background-color: rgba(128, 128, 128, 0.05); border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(128, 128, 128, 0.2); }
-    .user-boy { border-left: 5px solid #4B89FF; text-align: left; }
-    .user-girl { border-right: 5px solid #FF4B4B; text-align: right; }
-    .time-text { font-size: 0.8rem; color: gray; }
-    
-    div.stButton > button { border-radius: 20px; font-weight: bold; }
-    div.stTextInput > div > div > input { border-radius: 10px; }
-    </style>
-    """, unsafe_allow_html=True)
 
 # --- 🚀 구글 시트 연동 설정 ---
 @st.cache_resource
@@ -98,7 +74,8 @@ def save_data():
 def check_password():
     if "password_correct" not in st.session_state: st.session_state["password_correct"] = False
     if st.session_state["password_correct"]: return True
-    st.title("🔐 수기 커플 노트")
+    
+    st.markdown("<h1 style='text-align: center;'>🔐 수기 커플 노트</h1>", unsafe_allow_html=True)
     pwd = st.text_input("우리 둘만의 비밀번호", type="password")
     if st.button("사랑으로 열기 ❤️"):
         if pwd == "6146":  
@@ -122,6 +99,67 @@ if check_password():
             st.session_state.current_mood_date = today_str
             save_data()
 
+    # ==========================================
+    # 📌 접속자 확인 및 다이내믹 배경색 강제 적용 (가장 상단 배치)
+    # ==========================================
+    with st.sidebar:
+        user_type = st.radio("👤 접속자", ["수기남자친구 👦", "수기 👧"])
+        user_name_only = "수기남자친구" if "남자친구" in user_type else "수기"
+        
+        if user_name_only == "수기":
+            bg_color = "#FFF5F7" # 파스텔 핑크
+            accent_color = "#FF4B4B"
+            user_icon = "👧"
+        else:
+            bg_color = "#E3F2FD" # 파스텔 블루
+            accent_color = "#4B89FF"
+            user_icon = "👦"
+
+    # [핵심] 모바일 브라우저 전체(html, body)를 강제 타겟팅하는 최종 CSS
+    st.markdown(f"""
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Gamja+Flower&display=swap');
+        
+        /* 폰트 적용 */
+        html, body, p, h1, h2, h3, h4, h5, h6, span, label, button, input, textarea, select, div[data-testid="stMetricValue"] {{
+            font-family: 'Gamja Flower', sans-serif !important;
+        }}
+        .material-symbols-rounded, [data-testid="stIconMaterial"] {{
+            font-family: 'Material Symbols Rounded' !important;
+        }}
+
+        /* 모바일 라이트모드 배경색 초강력 덮어쓰기 */
+        @media (prefers-color-scheme: light) {{
+            html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"], [data-testid="stHeader"] {{
+                background-color: {bg_color} !important;
+                background: {bg_color} !important;
+            }}
+            /* 배경이 들어갔을 때 카드들이 예쁘게 보이도록 반투명 흰색 적용 */
+            .card {{ background-color: rgba(255, 255, 255, 0.7) !important; }}
+            [data-testid="stSidebar"] {{ background-color: rgba(255, 255, 255, 0.8) !important; }}
+        }}
+        
+        /* 다크모드 공통 설정 및 기본 요소 */
+        .card {{ background-color: rgba(128, 128, 128, 0.05); border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(128, 128, 128, 0.2); }}
+        .user-boy {{ border-left: 5px solid #4B89FF; text-align: left; }}
+        .user-girl {{ border-right: 5px solid #FF4B4B; text-align: right; }}
+        .time-text {{ font-size: 0.8rem; color: gray; }}
+        div.stButton > button {{ border-radius: 20px; font-weight: bold; }}
+        div.stTextInput > div > div > input {{ border-radius: 10px; }}
+        [data-testid="stMetricValue"] {{ color: {accent_color} !important; }}
+        </style>
+        """, unsafe_allow_html=True)
+
+    # ==========================================
+    # 📌 모바일 최적화: 시인성 200% 사이드바 알림 배너
+    # ==========================================
+    st.markdown("""
+        <div style="background-color: #fffbe6; padding: 12px; border-radius: 10px; border: 2px dashed #ff4b4b; text-align: center; margin-bottom: 15px; box-shadow: 0px 4px 6px rgba(0,0,0,0.05);">
+            <span style="font-size: 1.1rem; font-weight: bold; color: #ff4b4b;">🚨 스마트폰 접속 시 필독! 🚨</span><br>
+            <span style="color: #333;">화면 맨 왼쪽 위 <b>[ > ]</b> 모양 버튼을 눌러야<br>우리의 D-Day와 데이트 일정을 볼 수 있어요! 👈</span>
+        </div>
+        """, unsafe_allow_html=True)
+
     # 상단 헤더
     col_h1, col_h2 = st.columns([0.85, 0.15])
     col_h1.markdown(f"<h2 style='color: #ff4b4b; margin:0;'>❤️ 수기 커플 노트</h2>", unsafe_allow_html=True)
@@ -129,54 +167,19 @@ if check_password():
         st.session_state.clear()
         st.rerun()
 
-    st.info("👈 **스마트폰이신가요?** 왼쪽 상단의 **[ > ]** 모양 버튼을 누르면 우리의 디데이와 약속을 볼 수 있어요!")
     st.success(f"📢 {st.session_state.notice}")
 
     # ==========================================
-    # 📌 사이드바 & 확실한 파스텔 배경색 스위칭
+    # 📌 사이드바 (메뉴 구성)
     # ==========================================
     with st.sidebar:
-        user_type = st.radio("👤 접속자", ["수기남자친구 👦", "수기 👧"])
-        user_name_only = "수기남자친구" if "남자친구" in user_type else "수기"
-        
-        if user_name_only == "수기":
-            bg_color = "#FFF5F7" # 핑크
-            accent_color = "#FF4B4B"
-            user_icon = "👧"
-        else:
-            bg_color = "#E3F2FD" # 블루
-            accent_color = "#4B89FF"
-            user_icon = "👦"
-
-        # [핵심 수정!] 라이트 모드일 때 스트림릿 내부 테마 변수(:root)와 모든 내부 도화지(.main)를 강제로 덮어씌움
-        st.markdown(f"""
-            <style>
-            @media (prefers-color-scheme: light) {{
-                :root {{
-                    --background-color: {bg_color} !important;
-                    --secondary-background-color: {bg_color} !important;
-                }}
-                /* 겉면부터 가장 안쪽 알맹이(.main)까지 모조리 지정 */
-                .stApp, .main, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
-                    background-color: {bg_color} !important;
-                }}
-                [data-testid="stSidebar"] {{
-                    background-color: rgba(255, 255, 255, 0.7) !important;
-                }}
-            }}
-            [data-testid="stMetricValue"] {{
-                color: {accent_color} !important;
-            }}
-            </style>
-            """, unsafe_allow_html=True)
-            
         st.markdown(f"""
             <div style="background-color: rgba(128,128,128,0.1); padding: 10px; border-radius: 10px; border-left: 5px solid {accent_color}; margin-bottom: 15px;">
                 <h3 style='color:{accent_color}; margin:0;'>{user_icon} {user_name_only} 접속 중 👋</h3>
             </div>
             """, unsafe_allow_html=True)
             
-        start_date = datetime.date(2026, 1, 1) # 사귄 날짜 (나중에 수정하세요!)
+        start_date = datetime.date(2026, 1, 1) # 사귄 날짜 수정하세요!
         days_passed = (now_kst.date() - start_date).days
         st.markdown(f"### 🌸 우리의 D-Day")
         st.metric(label=f"연애 시작일: {start_date}", value=f"D + {days_passed}일")
@@ -253,10 +256,9 @@ if check_password():
         
         if st.button("기분 업데이트"):
             st.session_state.moods[user_name_only] = my_mood
-            # 기록 저장은 유지 (나중을 위해)
+            # 기록은 남겨두지만 그래프 라이브러리는 불러오지 않음
             today_record = next((item for item in st.session_state.mood_history if item["date"] == today_str), None)
             mood_score = {"😢": 1, "☁️": 2, "🙂": 3, "🥰": 4, "🔥": 5}
-            
             if today_record:
                 today_record[f"{user_name_only}_score"] = mood_score[my_mood]
             else:
@@ -270,8 +272,6 @@ if check_password():
 
         st.write(f"👦 수기남자친구: {st.session_state.moods['수기남자친구']} ({mood_desc[st.session_state.moods['수기남자친구']]})")
         st.write(f"👧 수기: {st.session_state.moods['수기']} ({mood_desc[st.session_state.moods['수기']]})")
-        
-        # 기분 그래프 표시 코드 완전 삭제 완료!
 
     # --- 탭 2: 쪽지함 ---
     with tabs[1]:
