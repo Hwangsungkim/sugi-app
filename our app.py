@@ -16,7 +16,7 @@ now_kst = datetime.datetime.now(KST)
 today_str = str(now_kst.date())
 current_time_str = now_kst.strftime("%H:%M")
 
-# --- 🎨 안전한 감성 UI/UX 폰트 및 다크/라이트 모드 대응 CSS ---
+# --- 🎨 안전한 감성 UI/UX 폰트 적용 ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Gamja+Flower&display=swap');
@@ -31,7 +31,7 @@ st.markdown("""
         font-family: 'Material Symbols Rounded' !important;
     }
     
-    /* 공통 디자인 요소 */
+    /* 공통 디자인 요소 (다크/라이트 모두 어울리게) */
     .card { background-color: rgba(128, 128, 128, 0.05); border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(128, 128, 128, 0.2); }
     .user-boy { border-left: 5px solid #4B89FF; text-align: left; }
     .user-girl { border-right: 5px solid #FF4B4B; text-align: right; }
@@ -137,7 +137,7 @@ if check_password():
     st.success(f"📢 {st.session_state.notice}")
 
     # ==========================================
-    # 📌 사이드바 & 라이트모드 전용 배경색 스위칭
+    # 📌 사이드바 & 접속자별 다이내믹 배경색 (최신 구조 반영)
     # ==========================================
     with st.sidebar:
         user_type = st.radio("👤 접속자", ["수기남자친구 👦", "수기 👧"])
@@ -152,25 +152,30 @@ if check_password():
             accent_color = "#4B89FF"
             user_icon = "👦"
 
-        # [다크모드 보호] 라이트 모드일 때만 배경색을 입히는 미디어 쿼리 CSS
+        # [원인 해결!] 가장 최상위 컨테이너(stAppViewContainer)까지 완벽히 타겟팅
         st.markdown(f"""
             <style>
             @media (prefers-color-scheme: light) {{
-                .stApp {{
+                /* 기본 .stApp 뿐만 아니라 흰색으로 덮어버리는 최상위 뷰 컨테이너까지 싹 다 배경색 변경 */
+                .stApp, [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"] {{
                     background-color: {bg_color} !important;
                 }}
+                /* 상단 빈 공간(헤더)을 투명하게 만들어 배경색과 자연스럽게 이어지게 함 */
+                [data-testid="stHeader"] {{
+                    background-color: transparent !important;
+                }}
+                /* 사이드바는 메인 배경색 위에 살짝 하얀 필터를 씌워 입체감을 줌 */
                 [data-testid="stSidebar"] {{
-                    background-color: rgba(255, 255, 255, 0.7) !important;
+                    background-color: rgba(255, 255, 255, 0.6) !important;
                 }}
             }}
-            /* 강조 텍스트 색상 (디데이 등) */
+            /* 메인 화면 강조 텍스트 색상 (디데이 등) */
             [data-testid="stMetricValue"] {{
                 color: {accent_color} !important;
             }}
             </style>
             """, unsafe_allow_html=True)
             
-        # [에러 해결 부분] st.success 대신 st.markdown을 사용하여 안전하게 HTML 렌더링
         st.markdown(f"""
             <div style="background-color: rgba(128,128,128,0.1); padding: 10px; border-radius: 10px; border-left: 5px solid {accent_color}; margin-bottom: 15px;">
                 <h3 style='color:{accent_color}; margin:0;'>{user_icon} {user_name_only} 접속 중 👋</h3>
