@@ -75,9 +75,10 @@ def check_password():
     if "password_correct" not in st.session_state: st.session_state["password_correct"] = False
     if st.session_state["password_correct"]: return True
     
-    st.markdown("<h1 style='text-align: center; color: #FF85A2;'>🔐 수기 커플 노트</h1>", unsafe_allow_html=True)
+    # 텍스트 하트(♥)를 사용하여 타이틀과 하트 색상을 파스텔 핑크로 완전 통일
+    st.markdown("<h1 style='text-align: center; color: #FF85A2;'>♥ 수기 커플 노트</h1>", unsafe_allow_html=True)
     pwd = st.text_input("우리 둘만의 비밀번호", type="password")
-    if st.button("사랑으로 열기 ❤️"):
+    if st.button("사랑으로 열기 ♥"):
         if pwd == "6146":  
             st.session_state["password_correct"] = True
             st.rerun()
@@ -100,7 +101,7 @@ if check_password():
             save_data()
 
     # ==========================================
-    # 📌 접속자 확인
+    # 📌 접속자 확인 및 다크모드 무력화 배경색 설정
     # ==========================================
     with st.sidebar:
         user_type = st.radio("👤 접속자", ["수기남자친구 👦", "수기 👧"])
@@ -115,49 +116,62 @@ if check_password():
             accent_color = "#4B89FF"
             user_icon = "👦"
 
-    # ==========================================
-    # 📌 [핵심] 절대 실패할 수 없는 배경색 물리적 적용 CSS
-    # ==========================================
-    # 1. 폰 화면 전체를 덮는 실제 물리적 배경 레이어 생성 (z-index: -99999)
+    # [핵심] 다크모드 무력화, 순백색 입력창 및 사이드바 강제 적용 CSS
+    # 실제 물리적 배경 레이어 생성 (항상 켜짐)
     st.markdown(f"""
         <div class="custom-bg-layer" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: {bg_color}; z-index: -99999; pointer-events: none;"></div>
         """, unsafe_allow_html=True)
 
-    # 2. 감자꽃 폰트 및 모바일 레이어 투명화 작업
     st.markdown(f"""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Gamja+Flower&display=swap');
         
-        /* 폰트 적용 */
-        html, body, p, h1, h2, h3, h4, h5, h6, span, label, button, input, textarea, select, div[data-testid="stMetricValue"] {{
+        /* 1. 폰트 및 기본 글씨색을 무조건 어둡게 고정 (다크모드 무력화) */
+        html, body, p, h1, h2, h3, h4, h5, h6, span, label, button, input, textarea, select, div[data-testid="stMetricValue"], .stMarkdown, .stText {{
             font-family: 'Gamja Flower', sans-serif !important;
+            color: #333333 !important;
         }}
         .material-symbols-rounded, [data-testid="stIconMaterial"] {{
             font-family: 'Material Symbols Rounded' !important;
+            color: #333333 !important;
         }}
 
-        /* 라이트 모드일 때 스트림릿의 모든 하얀색 덮개를 '투명(transparent)'으로 만들어 뒤에 깐 배경이 비치게 함 */
-        @media (prefers-color-scheme: light) {{
-            html, body, .stApp, .main, [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"], [data-testid="stHeader"] {{
-                background-color: transparent !important;
-                background: transparent !important;
-            }}
-            .card {{ background-color: rgba(255, 255, 255, 0.7) !important; border: none !important; box-shadow: 2px 2px 10px rgba(0,0,0,0.05); }}
-            [data-testid="stSidebar"] {{ background-color: rgba(255, 255, 255, 0.8) !important; }}
+        /* 2. 스트림릿 기본 하얀/까만 덮개를 모두 '투명'하게 만들어 파스텔 색상이 비치게 함 */
+        html, body, .stApp, .main, [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"], [data-testid="stHeader"] {{
+            background-color: transparent !important;
+            background: transparent !important;
         }}
         
-        /* 다크 모드일 때는 밝은 커스텀 배경을 숨기고 원래의 다크모드 유지 */
-        @media (prefers-color-scheme: dark) {{
-            .custom-bg-layer {{ display: none !important; }}
+        /* 3. [요청 반영] 입력창 및 텍스트 에어리어 '순백색' 고정 */
+        input, textarea, select, div.stTextInput > div > div > input, div.stTextArea > div > div > textarea {{
+            background-color: #ffffff !important;
+            color: #333333 !important;
+            border: 1px solid #cccccc !important;
         }}
         
-        /* 공통 설정 */
-        .card {{ background-color: rgba(128, 128, 128, 0.05); border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(128, 128, 128, 0.2); }}
+        /* 4. [요청 반영] 사이드바 투명도 0% (겹침 방지 순백색 고정) */
+        [data-testid="stSidebar"], [data-testid="stSidebar"] > div:first-child {{ 
+            background-color: #ffffff !important; 
+            opacity: 1 !important;
+            border-right: 1px solid #eeeeee !important;
+            box-shadow: 2px 0px 10px rgba(0,0,0,0.05) !important;
+        }}
+        
+        /* 5. 카드 및 확장 메뉴도 깔끔하게 순백색 */
+        .card, [data-testid="stExpander"] {{ 
+            background-color: #ffffff !important; 
+            border-radius: 15px; 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            border: 1px solid rgba(128, 128, 128, 0.2) !important; 
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.05); 
+        }}
+        
+        /* 기타 포인트 요소 */
         .user-boy {{ border-left: 5px solid #4B89FF; text-align: left; }}
         .user-girl {{ border-right: 5px solid #FF85A2; text-align: right; }}
-        .time-text {{ font-size: 0.8rem; color: gray; }}
-        div.stButton > button {{ border-radius: 20px; font-weight: bold; }}
-        div.stTextInput > div > div > input {{ border-radius: 10px; }}
+        .time-text {{ font-size: 0.8rem; color: gray !important; }}
+        div.stButton > button {{ border-radius: 20px; font-weight: bold; background-color: #ffffff !important; border: 1px solid #ddd !important; color: #333333 !important; }}
         [data-testid="stMetricValue"] {{ color: {accent_color} !important; }}
         </style>
         """, unsafe_allow_html=True)
@@ -166,15 +180,15 @@ if check_password():
     # 📌 시인성 200% 사이드바 알림 배너
     # ==========================================
     st.markdown("""
-        <div style="background-color: #fffbe6; padding: 12px; border-radius: 10px; border: 2px dashed #FF85A2; text-align: center; margin-bottom: 15px; box-shadow: 0px 4px 6px rgba(0,0,0,0.05);">
+        <div style="background-color: #ffffff; padding: 12px; border-radius: 10px; border: 2px dashed #FF85A2; text-align: center; margin-bottom: 15px; box-shadow: 0px 4px 6px rgba(0,0,0,0.05);">
             <span style="font-size: 1.1rem; font-weight: bold; color: #FF85A2;">🚨 스마트폰 접속 시 필독! 🚨</span><br>
-            <span style="color: #333;">화면 맨 왼쪽 위 <b>[ > ]</b> 모양 버튼을 눌러야<br>우리의 D-Day와 데이트 일정을 볼 수 있어요! 👈</span>
+            <span style="color: #333333;">화면 맨 왼쪽 위 <b>[ > ]</b> 모양 버튼을 눌러야<br>우리의 D-Day와 데이트 일정을 볼 수 있어요! 👈</span>
         </div>
         """, unsafe_allow_html=True)
 
-    # 상단 헤더 (타이틀 핑크색으로 변경)
+    # 상단 헤더 (텍스트 하트 교체 및 파스텔 핑크 색상 통일)
     col_h1, col_h2 = st.columns([0.85, 0.15])
-    col_h1.markdown(f"<h2 style='color: #FF85A2; margin:0;'>❤️ 수기 커플 노트</h2>", unsafe_allow_html=True)
+    col_h1.markdown(f"<h2 style='color: #FF85A2; margin:0;'>♥ 수기 커플 노트</h2>", unsafe_allow_html=True)
     if col_h2.button("🔄"):
         st.session_state.clear()
         st.rerun()
@@ -186,7 +200,7 @@ if check_password():
     # ==========================================
     with st.sidebar:
         st.markdown(f"""
-            <div style="background-color: rgba(128,128,128,0.1); padding: 10px; border-radius: 10px; border-left: 5px solid {accent_color}; margin-bottom: 15px;">
+            <div style="background-color: rgba(128,128,128,0.05); padding: 10px; border-radius: 10px; border-left: 5px solid {accent_color}; margin-bottom: 15px;">
                 <h3 style='color:{accent_color}; margin:0;'>{user_icon} {user_name_only} 접속 중 👋</h3>
             </div>
             """, unsafe_allow_html=True)
@@ -432,9 +446,9 @@ if check_password():
             link_html = f"<br><a href='{r.get('link', '#')}' target='_blank'>🔗 지도에서 보기</a>" if r.get('link') else ""
             st.markdown(f"""
                 <div class="card">
-                    <span style="background-color:rgba(128,128,128,0.2); padding:2px 5px; border-radius:5px; font-size:0.8rem;">{r['cat']}</span>
+                    <span style="background-color:rgba(128,128,128,0.2); padding:2px 5px; border-radius:5px; font-size:0.8rem; color:#333333;">{r['cat']}</span>
                     <b>{r['name']}</b> {r['rating']} ({r['date']})
                     {link_html} <br><br>
-                    <p style="margin: 0;">{r['comment']}</p>
+                    <p style="margin: 0; color:#333333;">{r['comment']}</p>
                 </div>
                 """, unsafe_allow_html=True)
