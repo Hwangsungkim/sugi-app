@@ -21,8 +21,12 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap');
     
-    * { font-family: 'Gowun Dodum', sans-serif !important; }
+    /* 폰트 적용 (단, 스트림릿 기본 아이콘 폰트는 깨지지 않게 예외 처리!) */
+    html, body, [class*="css"], [class*="st-"] { 
+        font-family: 'Gowun Dodum', sans-serif; 
+    }
     
+    /* 다크모드/라이트모드 모두 어울리는 반투명 카드 디자인 */
     .card { background-color: rgba(128, 128, 128, 0.05); border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 2px 2px 10px rgba(0,0,0,0.05); border: 1px solid rgba(128, 128, 128, 0.1); }
     .user-boy { border-left: 5px solid #4B89FF; text-align: left; }
     .user-girl { border-right: 5px solid #FF4B4B; text-align: right; }
