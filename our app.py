@@ -16,22 +16,22 @@ now_kst = datetime.datetime.now(KST)
 today_str = str(now_kst.date())
 current_time_str = now_kst.strftime("%H:%M")
 
-# --- 🎨 안전한 감성 UI/UX 폰트 적용 (에러 원인 제거) ---
+# --- 🎨 안전한 감성 UI/UX 폰트 및 다크/라이트 모드 대응 CSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Gamja+Flower&display=swap');
     
-    /* 레이아웃(div)을 깨지 않고 안전하게 텍스트에만 폰트 적용 */
-    html, body, p, h1, h2, h3, h4, h5, h6, span, label, button, input, textarea, select {
+    /* 레이아웃을 깨지 않고 안전하게 텍스트에만 '감자꽃' 폰트 적용 */
+    html, body, p, h1, h2, h3, h4, h5, h6, span, label, button, input, textarea, select, div[data-testid="stMetricValue"] {
         font-family: 'Gamja Flower', sans-serif !important;
     }
     
-    /* 스트림릿 기본 아이콘(설정, 화살표 등) 깨짐 방지 */
+    /* 스트림릿 기본 아이콘 깨짐 방지 */
     .material-symbols-rounded, [data-testid="stIconMaterial"] {
         font-family: 'Material Symbols Rounded' !important;
     }
     
-    /* 다크모드/라이트모드 모두 어울리는 은은한 반투명 카드 디자인 */
+    /* 공통 디자인 요소 */
     .card { background-color: rgba(128, 128, 128, 0.05); border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(128, 128, 128, 0.2); }
     .user-boy { border-left: 5px solid #4B89FF; text-align: left; }
     .user-girl { border-right: 5px solid #FF4B4B; text-align: right; }
@@ -152,18 +152,15 @@ if check_password():
             accent_color = "#4B89FF"
             user_icon = "👦"
 
-        # [핵심 수정] 스마트 기기 라이트 모드일 때만 배경색 적용! (다크모드는 원래대로 유지)
+        # [다크모드 보호] 라이트 모드일 때만 배경색을 입히는 미디어 쿼리 CSS
         st.markdown(f"""
             <style>
             @media (prefers-color-scheme: light) {{
                 .stApp {{
                     background-color: {bg_color} !important;
                 }}
-                [data-testid="stHeader"] {{
-                    background-color: transparent !important;
-                }}
                 [data-testid="stSidebar"] {{
-                    background-color: rgba(255, 255, 255, 0.6) !important;
+                    background-color: rgba(255, 255, 255, 0.7) !important;
                 }}
             }}
             /* 강조 텍스트 색상 (디데이 등) */
@@ -173,10 +170,14 @@ if check_password():
             </style>
             """, unsafe_allow_html=True)
             
-        st.success(f"<h3 style='color:{accent_color}; margin:0;'>{user_icon} {user_name_only} 접속 중 👋</h3>", unsafe_allow_html=True)
-        st.divider()
-        
-        start_date = datetime.date(2026, 1, 1) # 사귄 날짜
+        # [에러 해결 부분] st.success 대신 st.markdown을 사용하여 안전하게 HTML 렌더링
+        st.markdown(f"""
+            <div style="background-color: rgba(128,128,128,0.1); padding: 10px; border-radius: 10px; border-left: 5px solid {accent_color}; margin-bottom: 15px;">
+                <h3 style='color:{accent_color}; margin:0;'>{user_icon} {user_name_only} 접속 중 👋</h3>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        start_date = datetime.date(2026, 1, 1) # 사귄 날짜 (나중에 수정하세요!)
         days_passed = (now_kst.date() - start_date).days
         st.markdown(f"### 🌸 우리의 D-Day")
         st.metric(label=f"연애 시작일: {start_date}", value=f"D + {days_passed}일")
@@ -428,6 +429,6 @@ if check_password():
                     <span style="background-color:rgba(128,128,128,0.2); padding:2px 5px; border-radius:5px; font-size:0.8rem;">{r['cat']}</span>
                     <b>{r['name']}</b> {r['rating']} ({r['date']})
                     {link_html} <br><br>
-                    <p>{r['comment']}</p>
+                    <p style="margin: 0;">{r['comment']}</p>
                 </div>
                 """, unsafe_allow_html=True)
