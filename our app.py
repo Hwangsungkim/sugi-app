@@ -1,30 +1,39 @@
 import streamlit as st
-from datetime import date, datetime
+import datetime
+import pytz
 import pandas as pd
 import random
 import json
 import gspread
 from google.oauth2.credentials import Credentials
 
-# 1. 앱 기본 설정
-st.set_page_config(page_title="수기 커플 노트", page_icon="🌸", layout="centered")
+# 1. 앱 기본 설정 (홈화면 추가 시 하트 아이콘 적용 💖)
+st.set_page_config(page_title="수기 커플 노트", page_icon="❤️", layout="centered")
 
-# --- 커스텀 CSS ---
+# --- 🌐 한국 시간(KST) 설정 ---
+KST = pytz.timezone('Asia/Seoul')
+now_kst = datetime.datetime.now(KST)
+today_str = str(now_kst.date())
+current_time_str = now_kst.strftime("%H:%M")
+
+# --- 🎨 감성 UI/UX 및 다크모드 대응 CSS (고운돋움체 적용) ---
 st.markdown("""
     <style>
-    .main { background-color: #fff5f5; }
-    .stButton>button { border-radius: 20px; width: 100%; }
-    .notice-board { background-color: #fffbe6; padding: 15px; border-radius: 12px; border-left: 6px solid #ffcc00; margin-bottom: 20px; color: #856404; font-weight: bold; }
-    .promise-card { background-color: #ffffff; padding: 25px; border-radius: 20px; border: 2px solid #ff4b4b; margin-bottom: 20px; box-shadow: 2px 2px 10px rgba(0,0,0,0.05); }
-    .promise-text { font-size: 1.1rem; font-weight: bold; color: #333; margin-bottom: 10px; }
-    .timeline-item { border-left: 3px solid #ff4b4b; padding-left: 20px; margin-bottom: 25px; background: white; padding: 15px; border-radius: 10px; box-shadow: 1px 1px 5px rgba(0,0,0,0.05); }
-    .review-card { background: white; padding: 15px; border-radius: 15px; border: 1px solid #ffebeb; margin-bottom: 10px; box-shadow: 2px 2px 8px rgba(0,0,0,0.05); }
-    .tag { background-color: #ff4b4b; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; margin-right: 5px; }
-    .memo-card { background-color: #ffffff; padding: 15px; border-radius: 15px; box-shadow: 2px 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px; }
+    @import url('https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap');
+    
+    * { font-family: 'Gowun Dodum', sans-serif !important; }
+    
+    /* 다크모드/라이트모드 모두 어울리는 반투명 카드 디자인 */
+    .card { background-color: rgba(128, 128, 128, 0.05); border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 2px 2px 10px rgba(0,0,0,0.05); border: 1px solid rgba(128, 128, 128, 0.1); }
     .user-boy { border-left: 5px solid #4B89FF; text-align: left; }
     .user-girl { border-right: 5px solid #FF4B4B; text-align: right; }
-    .time-text { font-size: 0.8rem; color: #888; }
-    .creator-tag { font-size: 0.75rem; color: #999; font-style: italic; }
+    .time-text { font-size: 0.8rem; color: gray; }
+    .creator-tag { font-size: 0.75rem; color: gray; font-style: italic; }
+    .visited-text { text-decoration: line-through; opacity: 0.5; }
+    
+    /* 둥근 버튼 및 입력창 */
+    div.stButton > button { border-radius: 20px; }
+    div.stTextInput > div > div > input { border-radius: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -42,28 +51,32 @@ def get_google_sheet():
 
 sheet = get_google_sheet()
 
-# 데이터 불러오기 함수 (구조 업데이트 적용)
+# 데이터 불러오기 함수 (v2.0 구조 업데이트 적용)
 def load_data():
     try:
         val = sheet.acell('A1').value
         if val:
             data = json.loads(val)
-            # 이전 버전 호환 및 새 리스트 기본값 설정
-            if "memo_history" not in data: data["memo_history"] = []
+            # v2.0 신규 데이터 구조 방어 코드
+            if "date_schedules" not in data: data["date_schedules"] = []
+            if "mood_history" not in data: data["mood_history"] = []
+            if "current_mood_date" not in data: data["current_mood_date"] = ""
             return data
     except:
         pass
-    # 데이터가 없거나 에러 시 기본값
     return {
         "notice": "비타민 챙겨 먹기! 오늘 하루도 화이팅 ✨",
         "promises": [{"text": "서운한 건 그날 바로 말하기 🗣️", "by": "수기남자친구"}],
         "memo_history": [],
-        "timeline": [{"date": "2026-01-01", "event": "우리 사귀기 시작한 날! ❤️", "by": "시스템"}],
+        "timeline": [],
         "moods": {"수기남자친구": "🙂", "수기": "🙂"},
+        "mood_history": [],
+        "current_mood_date": today_str,
         "challenges": [],
         "wishlist": [],
         "reviews": [],
-        "menu_list": ["삼겹살", "초밥", "파스타", "치킨", "떡볶이"]
+        "menu_list": ["삼겹살", "초밥"],
+        "date_schedules": []
     }
 
 def save_data():
@@ -73,10 +86,13 @@ def save_data():
         "memo_history": st.session_state.memo_history,
         "timeline": st.session_state.timeline,
         "moods": st.session_state.moods,
+        "mood_history": st.session_state.mood_history,
+        "current_mood_date": st.session_state.current_mood_date,
         "challenges": st.session_state.challenges,
         "wishlist": st.session_state.wishlist,
         "reviews": st.session_state.reviews,
-        "menu_list": st.session_state.menu_list
+        "menu_list": st.session_state.menu_list,
+        "date_schedules": st.session_state.date_schedules
     }
     sheet.update_acell('A1', json.dumps(data_to_save))
 
@@ -101,267 +117,284 @@ if check_password():
             st.session_state[key] = value
         st.session_state['photos'] = [] 
         st.session_state['data_loaded'] = True
-
-    # 사이드바 (접속자 확실히 표시!)
-    with st.sidebar:
-        st.title("👤 접속 설정")
-        user_type = st.radio("당신은 누구인가요?", ["수기남자친구 👦", "수기 👧"])
-        # 접속자 족적 및 알림 강조
-        user_name_only = "수기남자친구" if "남자친구" in user_type else "수기"
-        st.success(f"현재 **{user_name_only}**님으로 로그인 중입니다! 👋")
         
+        # 날짜 변경 시 기분 초기화 로직 (한국시간 기준)
+        if st.session_state.current_mood_date != today_str:
+            st.session_state.moods = {"수기남자친구": "🙂", "수기": "🙂"}
+            st.session_state.current_mood_date = today_str
+            save_data()
+
+    # 상단 헤더 & 새로고침 버튼
+    col_h1, col_h2 = st.columns([0.85, 0.15])
+    col_h1.markdown(f"<h2 style='color: #ff4b4b;'>❤️ 수기 커플 노트 v2.0</h2>", unsafe_allow_html=True)
+    if col_h2.button("🔄"):
+        st.session_state.clear()
+        st.rerun()
+
+    # 공지사항
+    st.info(f"📢 {st.session_state.notice}")
+
+    # ==========================================
+    # 📌 사이드바 (메인 통합 요소)
+    # ==========================================
+    with st.sidebar:
+        user_type = st.radio("👤 접속자", ["수기남자친구 👦", "수기 👧"])
+        user_name_only = "수기남자친구" if "남자친구" in user_type else "수기"
+        st.success(f"**{user_name_only}** 접속 중 👋")
+        
+        st.divider()
+        
+        # 1. 우리의 D-Day
+        start_date = datetime.date(2026, 1, 1) # 사귄 날짜 수정 필요!
+        days_passed = (now_kst.date() - start_date).days
+        st.markdown(f"### 🌸 우리의 D-Day")
+        st.write(f"**연애 시작일:** {start_date}")
+        st.write(f"**D + {days_passed}일** ❤️")
+        
+        st.divider()
+        
+        # 2. 오늘 데이트 일정
+        st.markdown("### 🗓️ 오늘 데이트 일정")
+        today_plans = [p for p in st.session_state.date_schedules if p['date'] == today_str]
+        if today_plans:
+            for p in today_plans:
+                st.write(f"✨ {p['plan']}")
+        else:
+            st.caption("오늘 등록된 일정이 없어요!")
+            
+        st.divider()
+        
+        # 3. 우리가 지키기로 한 약속
+        st.markdown("### 📜 우리의 약속")
+        for i, p in enumerate(st.session_state.promises):
+            p_text = p['text'] if isinstance(p, dict) else p
+            st.write(f"{i+1}. {p_text}")
+            
         st.divider()
         if st.button("로그아웃"):
-            st.session_state["password_correct"] = False
+            st.session_state.clear()
             st.rerun()
 
-    # 1. 수기 전용 알림판
-    st.markdown(f'<div class="notice-board">📢 수기 알림판: {st.session_state.notice}</div>', unsafe_allow_html=True)
-    with st.expander("🔔 알림판 문구 수정하기"):
-        updated_notice = st.text_input("수정할 공지", value=st.session_state.notice)
-        if st.button("수정 완료"):
-            st.session_state.notice = updated_notice
-            save_data() 
-            st.rerun()
+    # ==========================================
+    # 📌 메인 탭 구성
+    # ==========================================
+    tabs = st.tabs(["💕 데이트", "💌 쪽지함", "📸 사진첩", "⏳ 타임라인", "🎰 랜덤/챌린지", "📍 장소/기록"])
 
-    st.markdown(f"<h1 style='text-align: center; color: #ff4b4b;'>❤️ 수기 커플 노트</h1>", unsafe_allow_html=True)
-    
-    tabs = st.tabs(["🤝 약속", "💌 쪽지함", "📸 사진첩", "📅 타임라인", "🎭 기분/날씨", "🎰 챌린지/랜덤", "📍 장소/기록"])
-
-    # --- 탭 1: 약속 (작성자 표시) ---
+    # --- 탭 1: 데이트 (일정 + 기분/날씨 통합) ---
     with tabs[0]:
-        start_date = date(2026, 1, 1) # 사귄 날짜 수정 필요!
-        days_passed = (date.today() - start_date).days
-        next_100d = 100 - (days_passed % 100)
-        
-        col_d1, col_d2 = st.columns(2)
-        col_d1.metric(label="우리가 사랑한 지", value=f"{days_passed}일")
-        col_d2.metric(label="다음 100일 기념일까지", value=f"{next_100d}일")
-        st.divider()
-        
-        st.subheader("📜 우리가 꼭 지키기로 한 약속")
-        st.markdown('<div class="promise-card">', unsafe_allow_html=True)
-        # 딕셔너리와 문자열 모두 호환되도록 처리 (과거 데이터 방어)
-        for i, p in enumerate(st.session_state.promises):
-            if isinstance(p, dict):
-                p_text, p_by = p['text'], p.get('by', '알수없음')
-            else:
-                p_text, p_by = p, '이전기록'
-            st.markdown(f'<div class="promise-text">{i+1}. {p_text} <span class="creator-tag">({p_by})</span></div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        with st.expander("✨ 약속 추가 및 수정하기"):
-            new_promise = st.text_input("새로운 약속 추가", placeholder="예: 한 달에 한 번은 여행 가기")
-            if st.button("새 약속 저장") and new_promise:
-                st.session_state.promises.append({"text": new_promise, "by": user_name_only})
+        st.subheader("🗓️ 우리의 데이트 일정")
+        with st.form("schedule_form", clear_on_submit=True):
+            s_date = st.date_input("데이트 날짜")
+            s_plan = st.text_input("무엇을 할까요?")
+            if st.form_submit_button("일정 추가") and s_plan:
+                st.session_state.date_schedules.append({"date": str(s_date), "plan": s_plan, "by": user_name_only})
+                st.session_state.date_schedules.sort(key=lambda x: x['date'])
                 save_data()
                 st.rerun()
-            
-            st.divider()
-            for i, p in enumerate(st.session_state.promises):
-                current_text = p['text'] if isinstance(p, dict) else p
-                col_p1, col_p2, col_p3 = st.columns([0.6, 0.2, 0.2])
-                edit_p = col_p1.text_input(f"약속 {i+1}", value=current_text, key=f"edit_p_{i}", label_visibility="collapsed")
-                if col_p2.button("수정", key=f"btn_edit_p_{i}"):
-                    if isinstance(st.session_state.promises[i], dict):
-                        st.session_state.promises[i]['text'] = edit_p
-                        st.session_state.promises[i]['by'] = user_name_only + "(수정됨)"
-                    else:
-                        st.session_state.promises[i] = {"text": edit_p, "by": user_name_only + "(수정됨)"}
-                    save_data()
-                    st.rerun()
-                if col_p3.button("삭제", key=f"btn_del_p_{i}"):
-                    st.session_state.promises.pop(i)
-                    save_data()
-                    st.rerun()
-
-    # --- 탭 2: 쪽지함 (히스토리 & 하루 1회 & 당일 수정) ---
-    with tabs[1]:
-        st.subheader("💌 우리의 쪽지함")
-        today_str = str(date.today())
+                
+        # 일정 목록 (1줄에 수정/삭제)
+        for i, s in enumerate(st.session_state.date_schedules):
+            col_s1, col_s2, col_s3 = st.columns([0.6, 0.2, 0.2])
+            edit_s = col_s1.text_input(f"일정 {i}", value=f"[{s['date']}] {s['plan']}", key=f"edit_s_{i}", label_visibility="collapsed")
+            if col_s2.button("수정", key=f"btn_s_edit_{i}"):
+                # 괄호 안의 날짜와 내용을 분리하는 로직을 넣거나, 편의상 통째로 덮어쓰기
+                st.session_state.date_schedules[i]['plan'] = edit_s.split("]")[-1].strip()
+                save_data()
+                st.rerun()
+            if col_s3.button("삭제", key=f"btn_s_del_{i}"):
+                st.session_state.date_schedules.pop(i)
+                save_data()
+                st.rerun()
+                
+        st.divider()
         
-        # 오늘 내가 쓴 쪽지가 있는지 찾기
+        # 기분 및 날씨 (하단 배치 & 설명 추가)
+        st.subheader("🎭 오늘 우리의 기분")
+        st.caption("매일 자정(한국시간)에 초기화됩니다.")
+        
+        mood_options = ["😢", "☁️", "🙂", "🥰", "🔥"]
+        mood_desc = {"😢": "피곤함/우울", "☁️": "그저그럼/무난", "🙂": "보통/평온", "🥰": "기분좋음/행복", "🔥": "최고/열정!"}
+        
+        my_mood = st.select_slider(f"{user_name_only}의 기분 선택", options=mood_options, value=st.session_state.moods[user_name_only])
+        st.write(f"👉 선택한 기분: **{mood_desc[my_mood]}**")
+        
+        if st.button("기분 업데이트"):
+            st.session_state.moods[user_name_only] = my_mood
+            # 그래프용 히스토리 저장 (중복 방지)
+            today_record = next((item for item in st.session_state.mood_history if item["date"] == today_str), None)
+            mood_score = {"😢": 1, "☁️": 2, "🙂": 3, "🥰": 4, "🔥": 5}
+            
+            if today_record:
+                today_record[f"{user_name_only}_score"] = mood_score[my_mood]
+            else:
+                new_record = {"date": today_str, "수기남자친구_score": mood_score[st.session_state.moods["수기남자친구"]], "수기_score": mood_score[st.session_state.moods["수기"]]}
+                new_record[f"{user_name_only}_score"] = mood_score[my_mood]
+                st.session_state.mood_history.append(new_record)
+            
+            save_data()
+            st.toast(f"{user_name_only}님의 기분이 업데이트 되었습니다! 💖")
+            st.rerun()
+
+        st.write(f"👦 수기남자친구: {st.session_state.moods['수기남자친구']} ({mood_desc[st.session_state.moods['수기남자친구']]})")
+        st.write(f"👧 수기: {st.session_state.moods['수기']} ({mood_desc[st.session_state.moods['수기']]})")
+        
+        # 기분 그래프
+        if st.session_state.mood_history:
+            st.write("📈 **최근 기분 변화 그래프**")
+            df_mood = pd.DataFrame(st.session_state.mood_history[-7:]) # 최근 7일
+            if not df_mood.empty:
+                df_mood.set_index('date', inplace=True)
+                st.line_chart(df_mood)
+
+    # --- 탭 2: 쪽지함 ---
+    with tabs[1]:
+        st.subheader("💌 오늘의 쪽지 (수정은 당일만!)")
         my_today_memo_idx = None
         for i, m in enumerate(st.session_state.memo_history):
             if m['date'] == today_str and m['user'] == user_name_only:
                 my_today_memo_idx = i
                 break
         
-        # 입력 폼 (당일 작성/수정)
         with st.container():
             if my_today_memo_idx is not None:
-                st.info("오늘의 쪽지를 이미 작성했어요! 오늘 자정 전까지는 내용을 수정할 수 있습니다. ✍️")
+                st.info("오늘의 쪽지를 이미 작성했어요! ✍️")
                 with st.form("edit_memo_form"):
-                    edit_content = st.text_area("오늘의 쪽지 수정", value=st.session_state.memo_history[my_today_memo_idx]['content'])
-                    if st.form_submit_button("쪽지 수정 완료"):
+                    edit_content = st.text_area("쪽지 내용", value=st.session_state.memo_history[my_today_memo_idx]['content'])
+                    if st.form_submit_button("수정 완료"):
                         st.session_state.memo_history[my_today_memo_idx]['content'] = edit_content
                         st.session_state.memo_history[my_today_memo_idx]['edited'] = True
                         save_data()
                         st.rerun()
             else:
                 with st.form("new_memo_form"):
-                    content = st.text_area("오늘 하루, 상대방에게 하고 싶은 말은? (하루 한 번만 작성 가능!)")
-                    if st.form_submit_button("쪽지 남기기") and content:
-                        new_memo = {
-                            "date": today_str,
-                            "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                            "user": user_name_only,
-                            "content": content,
-                            "edited": False
-                        }
-                        st.session_state.memo_history.insert(0, new_memo) # 최신순 정렬
+                    content = st.text_area("오늘 하루, 하고 싶은 말은?")
+                    if st.form_submit_button("남기기") and content:
+                        st.session_state.memo_history.insert(0, {"date": today_str, "time": current_time_str, "user": user_name_only, "content": content, "edited": False})
                         save_data()
                         st.rerun()
 
         st.divider()
-        st.write("📖 **지난 쪽지 기록** (과거 쪽지는 수정/삭제 불가)")
-        
         for m in st.session_state.memo_history:
             is_boy = "수기남자친구" in m['user']
-            alignment_class = "user-boy" if is_boy else "user-girl"
-            edited_mark = "(수정됨)" if m.get('edited', False) else ""
-            
-            st.markdown(f"""
-                <div class="memo-card {alignment_class}">
-                    <small><b>{m['user']}</b> | {m['date']}</small>
-                    <p style="font-size:1.1rem; margin:5px 0;">{m['content']}</p>
-                    <span class="time-text">{m['time']} {edited_mark}</span>
-                </div>
-                """, unsafe_allow_html=True)
+            align_cls = "user-boy" if is_boy else "user-girl"
+            st.markdown(f'<div class="card {align_cls}"><small><b>{m["user"]}</b> | {m["date"]}</small><p>{m["content"]}</p><span class="time-text">{m["time"]}</span></div>', unsafe_allow_html=True)
 
     # --- 탭 3: 사진첩 ---
     with tabs[2]:
-        st.subheader("📸 우리들의 사진첩 (임시 보관)")
-        st.caption("⚠️ 사진은 구글 시트 용량 제한으로 접속 중일 때만 보관됩니다. (드라이브 연동 업데이트 대기 중!)")
+        st.subheader("📸 임시 사진첩")
+        st.caption("구글 드라이브 연동 전까지 앱이 켜져 있을 때만 유지됩니다.")
         img_file = st.file_uploader("사진 올리기", type=["jpg", "png"])
-        img_cap = st.text_input("사진 설명")
-        if st.button("사진첩 저장"):
-            if img_file:
-                st.session_state.photos.insert(0, {"img": img_file.getvalue(), "cap": img_cap, "date": date.today(), "user": user_name_only})
-                st.rerun()
+        if img_file and st.button("업로드"):
+            st.session_state.photos.insert(0, {"img": img_file.getvalue(), "date": today_str, "user": user_name_only})
+            st.rerun()
         for p in st.session_state.photos:
-            st.image(p['img'], caption=f"{p['date']} | {p['cap']} (by {p['user']})", use_container_width=True)
+            st.image(p['img'], caption=f"{p['date']} by {p['user']}", use_container_width=True)
 
-    # --- 탭 4: 타임라인 (작성자 표시) ---
+    # --- 탭 4: 타임라인 ---
     with tabs[3]:
-        st.subheader("⏳ 우리만의 역사")
+        st.subheader("⏳ 타임라인")
         with st.form("timeline_form", clear_on_submit=True):
             t_date = st.date_input("날짜")
             t_event = st.text_input("기록할 사건")
-            if st.form_submit_button("사건 저장") and t_event:
+            if st.form_submit_button("저장") and t_event:
                 st.session_state.timeline.append({"date": str(t_date), "event": t_event, "by": user_name_only})
                 st.session_state.timeline.sort(key=lambda x: x['date'], reverse=True)
                 save_data()
                 st.rerun()
         for item in st.session_state.timeline:
-            writer = item.get('by', '이전기록')
-            st.markdown(f'<div class="timeline-item"><b>{item["date"]}</b> <span class="creator-tag">({writer})</span><br>{item["event"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="card"><b>{item["date"]}</b> ({item.get("by", "")})<br>{item["event"]}</div>', unsafe_allow_html=True)
 
-    # --- 탭 5: 기분 & 날씨 (알림 효과 추가) ---
+    # --- 탭 5: 랜덤/챌린지 ---
     with tabs[4]:
-        st.subheader("🎭 오늘 우리의 기분")
-        my_mood = st.select_slider(f"{user_name_only}의 기분", options=["😢", "☁️", "🙂", "🥰", "🔥"], value=st.session_state.moods[user_name_only])
-        if st.button("기분 업데이트"):
-            st.session_state.moods[user_name_only] = my_mood
-            save_data()
-            st.toast(f"{user_name_only}님의 기분이 업데이트 되었습니다! 💖", icon="✨") # 토스트 알림 추가!
-
-        st.divider()
-        mood_score = {"😢": 1, "☁️": 2, "🙂": 3, "🥰": 4, "🔥": 5}
-        avg = (mood_score[st.session_state.moods["수기남자친구"]] + mood_score[st.session_state.moods["수기"]]) / 2
-        weather = "☀️ 맑음" if avg >= 4 else "⛅ 구름조금" if avg >= 3 else "☔ 흐림/비 (서로 따뜻한 말이 필요해요)"
-        
-        st.write(f"👦 수기남자친구: {st.session_state.moods['수기남자친구']} / 👧 수기: {st.session_state.moods['수기']}")
-        st.info(f"오늘 우리 사이 날씨: **{weather}**")
-
-    # --- 탭 6: 챌린지 & 랜덤메뉴 (수정/삭제 기능 추가) ---
-    with tabs[5]:
-        st.subheader("🏆 우리만의 챌린지")
-        with st.form("c_form", clear_on_submit=True):
-            new_c = st.text_input("새 챌린지")
-            if st.form_submit_button("추가") and new_c:
-                st.session_state.challenges.append({"name": new_c, "count": 0, "by": user_name_only})
-                save_data()
-                st.rerun()
-        
-        for i, c in enumerate(st.session_state.challenges):
-            col1, col2, col3, col4 = st.columns([0.5, 0.15, 0.15, 0.2])
-            col1.write(f"**{c['name']}** ({c['count']}회)")
-            if col2.button("+1", key=f"c_add_{i}"):
-                st.session_state.challenges[i]['count'] += 1
-                save_data()
-                st.rerun()
-            if col3.button("-1", key=f"c_sub_{i}"):
-                st.session_state.challenges[i]['count'] = max(0, st.session_state.challenges[i]['count'] - 1)
-                save_data()
-                st.rerun()
-            if col4.button("삭제", key=f"c_del_{i}"):
-                st.session_state.challenges.pop(i)
-                save_data()
-                st.rerun()
-        
-        st.divider()
-        st.subheader("🎰 메뉴 돌림판")
+        st.subheader("🎰 메뉴 돌림판 (한 줄 꽉 차게!)")
         if st.button("메뉴 랜덤 뽑기! 🎲"):
-            st.warning(f"오늘의 추천 메뉴: **{random.choice(st.session_state.menu_list)}** 😋")
-            st.toast("메뉴가 선택되었습니다!", icon="🍽️")
+            st.warning(f"오늘의 추천: **{random.choice(st.session_state.menu_list)}** 😋")
             
-        with st.expander("🍴 메뉴 리스트 관리 (추가/수정/삭제)"):
-            new_menu = st.text_input("새 메뉴 추가")
-            if st.button("메뉴 추가") and new_menu:
-                st.session_state.menu_list.append(new_menu)
+        new_menu = st.text_input("새 메뉴 추가", placeholder="엔터 누르면 바로 추가 안됨, 아래 리스트에서 관리")
+        if st.button("추가") and new_menu:
+            st.session_state.menu_list.append(new_menu)
+            save_data()
+            st.rerun()
+            
+        for i, menu in enumerate(st.session_state.menu_list):
+            # 1줄 배치 (입력창 60%, 버튼 20%, 20%)
+            col_m1, col_m2, col_m3 = st.columns([0.6, 0.2, 0.2])
+            edit_m = col_m1.text_input(f"메뉴 {i}", value=menu, key=f"edit_m_{i}", label_visibility="collapsed")
+            if col_m2.button("수정", key=f"btn_m_edit_{i}"):
+                st.session_state.menu_list[i] = edit_m
+                save_data()
+                st.rerun()
+            if col_m3.button("삭제", key=f"btn_m_del_{i}"):
+                st.session_state.menu_list.pop(i)
+                save_data()
+                st.rerun()
+
+    # --- 탭 6: 장소/기록 (위시리스트 + 리뷰 링크) ---
+    with tabs[5]:
+        st.subheader("📍 위시리스트 (1줄 컨트롤 & 방문체크)")
+        with st.form("w_form", clear_on_submit=True):
+            w_place = st.text_input("가고 싶은 곳")
+            if st.form_submit_button("추가") and w_place:
+                st.session_state.wishlist.append({"place": w_place, "visited": False, "by": user_name_only})
                 save_data()
                 st.rerun()
                 
-            st.write("---")
-            for i, menu in enumerate(st.session_state.menu_list):
-                col_m1, col_m2, col_m3 = st.columns([0.6, 0.2, 0.2])
-                edit_m = col_m1.text_input(f"메뉴 {i}", value=menu, key=f"edit_m_{i}", label_visibility="collapsed")
-                if col_m2.button("수정", key=f"btn_m_edit_{i}"):
-                    st.session_state.menu_list[i] = edit_m
-                    save_data()
-                    st.rerun()
-                if col_m3.button("삭제", key=f"btn_m_del_{i}"):
-                    st.session_state.menu_list.pop(i)
-                    save_data()
-                    st.rerun()
-
-    # --- 탭 7: 장소 위시리스트, 후기 ---
-    with tabs[6]:
-        col_w, col_r = st.columns(2)
-        with col_w:
-            st.subheader("📍 위시리스트")
-            with st.form("w_form", clear_on_submit=True):
-                w_place = st.text_input("가고 싶은 곳")
-                if st.form_submit_button("저장") and w_place:
-                    st.session_state.wishlist.append({"place": w_place, "by": user_name_only})
-                    save_data()
-                    st.rerun()
-            for i, w in enumerate(st.session_state.wishlist):
-                # 구버전(문자열)과 신버전(딕셔너리) 호환
-                p_name = w['place'] if isinstance(w, dict) else w
-                p_by = w.get('by', '이전기록') if isinstance(w, dict) else '이전기록'
+        for i, w in enumerate(st.session_state.wishlist):
+            # 과거 데이터 호환 처리
+            if isinstance(w, str):
+                st.session_state.wishlist[i] = {"place": w, "visited": False, "by": "알수없음"}
+                w = st.session_state.wishlist[i]
                 
-                col_w1, col_w2 = st.columns([0.8, 0.2])
-                col_w1.write(f"· {p_name} <span class='creator-tag'>({p_by})</span>", unsafe_allow_html=True)
-                if col_w2.button("X", key=f"del_w_{i}"):
-                    st.session_state.wishlist.pop(i)
-                    save_data()
-                    st.rerun()
+            # 1줄 배치: 체크박스(10%), 입력창(50%), 수정(20%), 삭제(20%)
+            col_w1, col_w2, col_w3, col_w4 = st.columns([0.1, 0.5, 0.2, 0.2])
+            is_visited = col_w1.checkbox("", value=w.get('visited', False), key=f"chk_w_{i}", label_visibility="collapsed")
             
-        with col_r:
-            st.subheader("📝 데이트 후기")
-            with st.form("r_form", clear_on_submit=True):
-                r_name = st.text_input("장소명")
-                r_cat = st.selectbox("종류", ["음식점", "카페", "공원", "기타"])
-                r_rating = st.selectbox("별점", ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"])
-                r_comment = st.text_area("후기")
-                if st.form_submit_button("후기 등록") and r_name:
-                    st.session_state.reviews.insert(0, {"name": r_name, "cat": r_cat, "rating": r_rating, "comment": r_comment, "date": str(date.today()), "by": user_name_only})
-                    save_data()
-                    st.rerun()
+            # 체크 상태가 바뀌면 자동 저장
+            if is_visited != w.get('visited', False):
+                st.session_state.wishlist[i]['visited'] = is_visited
+                save_data()
+                st.rerun()
+                
+            # 체크 여부에 따른 글씨 효과
+            place_val = w['place']
+            if is_visited:
+                edit_w = col_w2.text_input(f"w{i}", value=place_val, key=f"edit_w_{i}", label_visibility="collapsed", disabled=True)
+                col_w2.caption("다녀옴! 👣")
+            else:
+                edit_w = col_w2.text_input(f"w{i}", value=place_val, key=f"edit_w_{i}", label_visibility="collapsed")
+                
+            if col_w3.button("수정", key=f"btn_w_edit_{i}") and not is_visited:
+                st.session_state.wishlist[i]['place'] = edit_w
+                save_data()
+                st.rerun()
+            if col_w4.button("삭제", key=f"btn_w_del_{i}"):
+                st.session_state.wishlist.pop(i)
+                save_data()
+                st.rerun()
         
         st.divider()
+        st.subheader("📝 데이트 후기 (링크/사진 추가 대기)")
+        with st.form("r_form", clear_on_submit=True):
+            r_name = st.text_input("장소명")
+            r_link = st.text_input("장소 링크 (URL - 선택사항)")
+            r_cat = st.selectbox("종류", ["음식점", "카페", "공원", "기타"])
+            r_rating = st.selectbox("별점", ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"])
+            r_comment = st.text_area("후기")
+            if st.form_submit_button("후기 등록") and r_name:
+                st.session_state.reviews.insert(0, {
+                    "name": r_name, "link": r_link, "cat": r_cat, "rating": r_rating, 
+                    "comment": r_comment, "photo_url": "", "date": today_str, "by": user_name_only
+                })
+                save_data()
+                st.rerun()
+        
         for r in st.session_state.reviews:
-            r_by = r.get('by', '이전기록')
-            st.markdown(f"""<div class="review-card"><span class="tag">{r['cat']}</span><b>{r['name']}</b> {r['rating']} ({r['date']}) <span class="creator-tag">by {r_by}</span><br>{r['comment']}</div>""", unsafe_allow_html=True)
+            link_html = f"<a href='{r.get('link', '#')}' target='_blank'>🔗 링크 이동</a>" if r.get('link') else ""
+            st.markdown(f"""
+                <div class="card">
+                    <span style="background-color:#eee; padding:2px 5px; border-radius:5px; font-size:0.8rem;">{r['cat']}</span>
+                    <b>{r['name']}</b> {r['rating']} ({r['date']}) <br>
+                    {link_html} <br><br>
+                    {r['comment']}
+                </div>
+                """, unsafe_allow_html=True)
