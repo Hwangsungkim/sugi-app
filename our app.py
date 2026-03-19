@@ -10,47 +10,36 @@ from google.oauth2.credentials import Credentials
 # 1. 앱 기본 설정
 st.set_page_config(page_title="수기 커플 노트", page_icon="❤️", layout="centered")
 
-# --- 🌐 한국 시간(KST) 설정 (이전 코드 기본 탑재) ---
+# --- 🌐 한국 시간(KST) 설정 ---
 KST = pytz.timezone('Asia/Seoul')
 now_kst = datetime.datetime.now(KST)
 today_str = str(now_kst.date())
 current_time_str = now_kst.strftime("%H:%M")
 
-# --- 🎨 초강력 감성 UI/UX 및 라이트 모드 고정 CSS ---
+# --- 🎨 안전한 감성 UI/UX 폰트 적용 (에러 원인 제거) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Gamja+Flower&display=swap');
     
-    /* 1. 폰트 적용 및 라이트 모드 강제 고정 (Gowun Dodum 제거 -> Gamja Flower 적용) */
-    html, body, p, div, h1, h2, h3, h4, h5, h6, span, label, button, input, textarea, select {
+    /* 레이아웃(div)을 깨지 않고 안전하게 텍스트에만 폰트 적용 */
+    html, body, p, h1, h2, h3, h4, h5, h6, span, label, button, input, textarea, select {
         font-family: 'Gamja Flower', sans-serif !important;
-        color: #333 !important; /* 글씨색 어둡게 고정 */
     }
     
-    /* 기본 배경색 하얗게 고정 (라이트 모드) */
-    .stApp {
-        background-color: #ffffff;
-    }
-
-    /* 2. 스트림릿 아이콘 보호 (Material Symbols) - 폰트 영향 안 받게 */
-    .material-symbols-rounded, [data-testid="stIconMaterial"], .st-emotion-cache-1r6slb6 {
+    /* 스트림릿 기본 아이콘(설정, 화살표 등) 깨짐 방지 */
+    .material-symbols-rounded, [data-testid="stIconMaterial"] {
         font-family: 'Material Symbols Rounded' !important;
     }
     
-    /* 3. 디자인 요소 스타일링 */
-    .card { background-color: rgba(255, 255, 255, 0.6); border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 2px 2px 10px rgba(0,0,0,0.03); border: 1px solid rgba(128, 128, 128, 0.1); }
-    .user-boy { border-left: 5px solid #4B89FF; text-align: left; background-color: rgba(75, 137, 255, 0.05); }
-    .user-girl { border-right: 5px solid #FF4B4B; text-align: right; background-color: rgba(255, 75, 75, 0.05); }
+    /* 다크모드/라이트모드 모두 어울리는 은은한 반투명 카드 디자인 */
+    .card { background-color: rgba(128, 128, 128, 0.05); border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(128, 128, 128, 0.2); }
+    .user-boy { border-left: 5px solid #4B89FF; text-align: left; }
+    .user-girl { border-right: 5px solid #FF4B4B; text-align: right; }
     .time-text { font-size: 0.8rem; color: gray; }
     
     /* 둥근 버튼 및 입력창 */
     div.stButton > button { border-radius: 20px; font-weight: bold; }
     div.stTextInput > div > div > input { border-radius: 10px; }
-    
-    /* 사이드바 스타일링 */
-    [data-testid="stSidebar"] {
-        background-color: rgba(255, 255, 255, 0.8) !important;
-    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -131,49 +120,53 @@ if check_password():
         st.session_state['photos'] = [] 
         st.session_state['data_loaded'] = True
         
-        # 기분 초기화 로직 (한국시간 기준)
+        # 기분 초기화
         if st.session_state.current_mood_date != today_str:
             st.session_state.moods = {"수기남자친구": "🙂", "수기": "🙂"}
             st.session_state.current_mood_date = today_str
             save_data()
 
-    # 상단 헤더 & 모바일 최적화 사이드바 안내
+    # 상단 헤더
     col_h1, col_h2 = st.columns([0.85, 0.15])
-    col_h1.markdown(f"<h2 style='color: #ff4b4b; margin:0;'>❤️ 수기 커플 노트 v2.3</h2>", unsafe_allow_html=True)
+    col_h1.markdown(f"<h2 style='color: #ff4b4b; margin:0;'>❤️ 수기 커플 노트</h2>", unsafe_allow_html=True)
     if col_h2.button("🔄"):
         st.session_state.clear()
         st.rerun()
 
-    # 스마트폰 사용자를 위한 직관적인 사이드바 안내 문구
     st.info("👈 **스마트폰이신가요?** 왼쪽 상단의 **[ > ]** 모양 버튼을 누르면 우리의 디데이와 약속을 볼 수 있어요!")
-
-    # 공지사항
     st.success(f"📢 {st.session_state.notice}")
 
     # ==========================================
-    # 📌 사이드바 (접속자별 배경색 스위칭 구현)
+    # 📌 사이드바 & 라이트모드 전용 배경색 스위칭
     # ==========================================
     with st.sidebar:
         user_type = st.radio("👤 접속자", ["수기남자친구 👦", "수기 👧"])
         user_name_only = "수기남자친구" if "남자친구" in user_type else "수기"
         
-        # --- [v2.3 핵심 기능] 접속자별 다이내믹 배경색 스위칭 CSS ---
         if user_name_only == "수기":
-            bg_color = "#FFF5F7" # 파스텔 핑크
+            bg_color = "#FFF5F7" # 라이트 핑크
             accent_color = "#FF4B4B"
             user_icon = "👧"
         else:
-            bg_color = "#E3F2FD" # 파스텔 블루
+            bg_color = "#E3F2FD" # 라이트 블루
             accent_color = "#4B89FF"
             user_icon = "👦"
 
-        # 앱 전체 배경색 강제 적용
+        # [핵심 수정] 스마트 기기 라이트 모드일 때만 배경색 적용! (다크모드는 원래대로 유지)
         st.markdown(f"""
             <style>
-            .stApp {{
-                background-color: {bg_color} !important;
+            @media (prefers-color-scheme: light) {{
+                .stApp {{
+                    background-color: {bg_color} !important;
+                }}
+                [data-testid="stHeader"] {{
+                    background-color: transparent !important;
+                }}
+                [data-testid="stSidebar"] {{
+                    background-color: rgba(255, 255, 255, 0.6) !important;
+                }}
             }}
-            /* 강조색 변경 (Metric 등) */
+            /* 강조 텍스트 색상 (디데이 등) */
             [data-testid="stMetricValue"] {{
                 color: {accent_color} !important;
             }}
@@ -181,18 +174,15 @@ if check_password():
             """, unsafe_allow_html=True)
             
         st.success(f"<h3 style='color:{accent_color}; margin:0;'>{user_icon} {user_name_only} 접속 중 👋</h3>", unsafe_allow_html=True)
-        
         st.divider()
         
-        # 1. 우리의 D-Day
-        start_date = datetime.date(2026, 1, 1) # 사귄 날짜 (나중에 수정하세요!)
+        start_date = datetime.date(2026, 1, 1) # 사귄 날짜
         days_passed = (now_kst.date() - start_date).days
         st.markdown(f"### 🌸 우리의 D-Day")
         st.metric(label=f"연애 시작일: {start_date}", value=f"D + {days_passed}일")
         
         st.divider()
         
-        # 2. 오늘 데이트 일정
         st.markdown("### 🗓️ 오늘 데이트 일정")
         today_plans = [p for p in st.session_state.date_schedules if p['date'] == today_str]
         if today_plans:
@@ -203,7 +193,6 @@ if check_password():
             
         st.divider()
         
-        # 3. 우리가 지키기로 한 약속
         st.markdown("### 📜 우리의 약속")
         for i, p in enumerate(st.session_state.promises):
             p_text = p['text'] if isinstance(p, dict) else p
@@ -226,7 +215,7 @@ if check_password():
     # ==========================================
     tabs = st.tabs(["💕 데이트", "💌 쪽지함", "📸 사진첩", "⏳ 타임라인", "😋 오늘 뭐 먹지?", "📍 장소/기록"])
 
-    # --- 탭 1: 데이트 (일정 + 기분/날씨) ---
+    # --- 탭 1: 데이트 ---
     with tabs[0]:
         st.subheader("🗓️ 우리의 데이트 일정")
         with st.form("schedule_form", clear_on_submit=True):
@@ -238,7 +227,6 @@ if check_password():
                 save_data()
                 st.rerun()
                 
-        # [모바일 최적화] 데이트 일정 목록 (서랍장 UX)
         for i, s in enumerate(st.session_state.date_schedules):
             with st.expander(f"📌 [{s['date']}] {s['plan']}"):
                 edit_s = st.text_input("일정 수정", value=s['plan'], key=f"edit_s_{i}")
@@ -254,7 +242,6 @@ if check_password():
                 
         st.divider()
         
-        # 기분 및 날씨
         st.subheader("🎭 오늘 우리의 기분")
         st.caption("매일 자정(한국시간)에 초기화됩니다.")
         
@@ -266,7 +253,6 @@ if check_password():
         
         if st.button("기분 업데이트"):
             st.session_state.moods[user_name_only] = my_mood
-            # 그래프용 히스토리 저장 로직
             today_record = next((item for item in st.session_state.mood_history if item["date"] == today_str), None)
             mood_score = {"😢": 1, "☁️": 2, "🙂": 3, "🥰": 4, "🔥": 5}
             
@@ -284,13 +270,11 @@ if check_password():
         st.write(f"👦 수기남자친구: {st.session_state.moods['수기남자친구']} ({mood_desc[st.session_state.moods['수기남자친구']]})")
         st.write(f"👧 수기: {st.session_state.moods['수기']} ({mood_desc[st.session_state.moods['수기']]})")
         
-        # 기분 그래프
         if st.session_state.mood_history:
             st.write("📈 **최근 기분 변화 그래프**")
             df_mood = pd.DataFrame(st.session_state.mood_history[-7:])
             if not df_mood.empty:
                 df_mood.set_index('date', inplace=True)
-                # 다이내믹 배경에 맞춰 라인 컬러도 살짝 조정
                 st.line_chart(df_mood)
 
     # --- 탭 2: 쪽지함 ---
@@ -324,13 +308,11 @@ if check_password():
         for m in st.session_state.memo_history:
             is_boy = "수기남자친구" in m['user']
             align_cls = "user-boy" if is_boy else "user-girl"
-            # 카드의 글씨색도 다크 모드 방지 위해 어둡게 설정
             st.markdown(f'<div class="card {align_cls}"><small><b>{m["user"]}</b> | {m["date"]}</small><p style="margin: 5px 0;">{m["content"]}</p><span class="time-text">{m["time"]}</span></div>', unsafe_allow_html=True)
 
     # --- 탭 3: 사진첩 ---
     with tabs[2]:
         st.subheader("📸 임시 사진첩")
-        st.caption("서버 연동 전까지 앱이 켜져 있을 때만 유지됩니다.")
         img_file = st.file_uploader("사진 올리기", type=["jpg", "png"])
         if img_file and st.button("업로드"):
             st.session_state.photos.insert(0, {"img": img_file.getvalue(), "date": today_str, "user": user_name_only})
@@ -357,7 +339,6 @@ if check_password():
         st.subheader("🎰 메뉴 돌림판")
         if st.button("메뉴 랜덤 뽑기! 🎲"):
             st.warning(f"오늘의 추천: **{random.choice(st.session_state.menu_list)}** 😋")
-            st.toast("메뉴가 선택되었습니다!", icon="🍽️")
             
         with st.form("menu_form", clear_on_submit=True):
             new_menu = st.text_input("새로운 메뉴 리스트 추가")
@@ -367,7 +348,6 @@ if check_password():
                 st.rerun()
                 
         st.write("👇 **메뉴를 터치하면 수정/삭제할 수 있어요!**")
-        # [모바일 최적화] 메뉴 리스트 (서랍장 UX)
         for i, menu in enumerate(st.session_state.menu_list):
             with st.expander(f"🍽️ {menu}"):
                 edit_m = st.text_input(f"메뉴 이름 수정", value=menu, key=f"edit_m_{i}")
@@ -381,7 +361,7 @@ if check_password():
                     save_data()
                     st.rerun()
 
-    # --- 탭 6: 장소/기록 (위시리스트 + 리뷰 지도 링크) ---
+    # --- 탭 6: 장소/기록 ---
     with tabs[5]:
         st.subheader("📍 우리의 위시리스트")
         with st.form("w_form", clear_on_submit=True):
@@ -392,7 +372,6 @@ if check_password():
                 st.rerun()
                 
         st.write("👇 **장소를 터치하여 방문 체크 및 관리하세요!**")
-        # [모바일 최적화] 위시리스트 (서랍장 UX)
         for i, w in enumerate(st.session_state.wishlist):
             if isinstance(w, str):
                 st.session_state.wishlist[i] = {"place": w, "visited": False, "by": "알수없음"}
@@ -444,12 +423,11 @@ if check_password():
         
         for r in st.session_state.reviews:
             link_html = f"<br><a href='{r.get('link', '#')}' target='_blank'>🔗 지도에서 보기</a>" if r.get('link') else ""
-            # 다크 모드 방지 위해 글씨색 어둡게 고정
             st.markdown(f"""
                 <div class="card">
-                    <span style="background-color:#eee; padding:2px 5px; border-radius:5px; font-size:0.8rem; color:#333;">{r['cat']}</span>
+                    <span style="background-color:rgba(128,128,128,0.2); padding:2px 5px; border-radius:5px; font-size:0.8rem;">{r['cat']}</span>
                     <b>{r['name']}</b> {r['rating']} ({r['date']})
                     {link_html} <br><br>
-                    <p style="color:#333;">{r['comment']}</p>
+                    <p>{r['comment']}</p>
                 </div>
                 """, unsafe_allow_html=True)
