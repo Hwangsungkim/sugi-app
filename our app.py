@@ -17,7 +17,7 @@ current_time_str = now_kst.strftime("%H:%M")
 
 # --- 🚀 구글 시트 연동 설정 ---
 @st.cache_resource
-def get_google_sheet():
+def get_spreadsheet():
     scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
     if "google_auth" in st.secrets:
         token_info = json.loads(st.secrets["google_auth"]["token"])
@@ -25,50 +25,64 @@ def get_google_sheet():
     else:
         creds = Credentials.from_authorized_user_file('token.json', scopes)
     client = gspread.authorize(creds)
-    return client.open('couple_app_data').sheet1
+    return client.open('couple_app_data')
 
-sheet = get_google_sheet()
+doc = get_spreadsheet()
+sheet_main = doc.worksheet('시트1')
+sheet_memo = doc.worksheet('쪽지함')
+sheet_time = doc.worksheet('타임라인')
+sheet_date = doc.worksheet('데이트일정')
+sheet_wish = doc.worksheet('위시리스트')
+sheet_review = doc.worksheet('데이트후기')
 
 def load_data():
     try:
-        val = sheet.acell('A1').value
-        if val:
-            data = json.loads(val)
-            if "date_schedules" not in data: data["date_schedules"] = []
-            if "mood_history" not in data: data["mood_history"] = []
-            if "current_mood_date" not in data: data["current_mood_date"] = ""
-            return data
+        val = sheet_main.acell('A1').value
+        main_data = json.loads(val) if val else {}
     except:
-        pass
+        main_data = {}
+
+    def get_json(sheet_obj):
+        try:
+            # HODL님이 만든 1번 줄 이름표를 피해 A2 셀에 저장/로드!
+            val = sheet_obj.acell('A2').value 
+            return json.loads(val) if val else []
+        except:
+            return []
+
     return {
-        "notice": "비타민 챙겨 먹기! 오늘 하루도 화이팅 ✨",
-        "promises": [{"text": "서운한 건 그날 바로 말하기 🗣️", "by": "수기남자친구"}],
-        "memo_history": [],
-        "timeline": [],
-        "moods": {"수기남자친구": "🙂", "수기": "🙂"},
-        "mood_history": [],
-        "current_mood_date": today_str,
-        "wishlist": [],
-        "reviews": [],
-        "menu_list": ["삼겹살", "초밥"],
-        "date_schedules": []
+        "notice": main_data.get("notice", "비타민 챙겨 먹기! 오늘 하루도 화이팅 ✨"),
+        "promises": main_data.get("promises", [{"text": "서운한 건 그날 바로 말하기 🗣️", "by": "수기남자친구"}]),
+        "moods": main_data.get("moods", {"수기남자친구": "🙂", "수기": "🙂"}),
+        "mood_history": main_data.get("mood_history", []),
+        "current_mood_date": main_data.get("current_mood_date", today_str),
+        "menu_list": main_data.get("menu_list", ["삼겹살", "초밥"]),
+        # 이제 각각의 전용 방에서 데이터를 불러옵니다.
+        "memo_history": get_json(sheet_memo),
+        "timeline": get_json(sheet_time),
+        "date_schedules": get_json(sheet_date),
+        "wishlist": get_json(sheet_wish),
+        "reviews": get_json(sheet_review)
     }
 
 def save_data():
-    data_to_save = {
+    # 1. 시트1에는 가벼운 단일 데이터만 저장
+    main_data = {
         "notice": st.session_state.notice,
         "promises": st.session_state.promises,
-        "memo_history": st.session_state.memo_history,
-        "timeline": st.session_state.timeline,
         "moods": st.session_state.moods,
         "mood_history": st.session_state.mood_history,
         "current_mood_date": st.session_state.current_mood_date,
-        "wishlist": st.session_state.wishlist,
-        "reviews": st.session_state.reviews,
         "menu_list": st.session_state.menu_list,
-        "date_schedules": st.session_state.date_schedules
     }
-    sheet.update_acell('A1', json.dumps(data_to_save))
+    sheet_main.update_acell('A1', json.dumps(main_data))
+    
+    # 2. 무거워지는 리스트 데이터는 각각의 전용 방(A2 셀)에 분산 저장
+    sheet_memo.update_acell('A2', json.dumps(st.session_state.memo_history))
+    sheet_time.update_acell('A2', json.dumps(st.session_state.timeline))
+    sheet_date.update_acell('A2', json.dumps(st.session_state.date_schedules))
+    sheet_wish.update_acell('A2', json.dumps(st.session_state.wishlist))
+    sheet_review.update_acell('A2', json.dumps(st.session_state.reviews))
 
 # --- 보안 설정 ---
 def check_password():
