@@ -8,22 +8,24 @@ from google.oauth2.credentials import Credentials
 
 # 1. 앱 기본 설정
 st.set_page_config(page_title="수기 커플 노트", page_icon="❤️", layout="centered")
+
+# ==========================================
+# 🍎 [Task 1-B] 아이폰(iOS) 전용 홈 화면 아이콘 강제 주입
+# ==========================================
+import streamlit.components.v1 as components
+components.html("""
+    <script>
+        // 부모 창의 HTML 헤더에 아이폰 전용 터치 아이콘(apple-touch-icon)을 몰래 심습니다.
+        const link = window.parent.document.createElement('link');
+        link.rel = 'apple-touch-icon';
+        link.href = 'https://cdn-icons-png.flaticon.com/512/833/833472.png'; // 예쁜 하트 아이콘 이미지
+        window.parent.document.head.appendChild(link);
+    </script>
+""", height=0, width=0)
+
 # ==========================================
 # 📱 [Task 1] PWA 앱 설치 유도 배너 (반응형 UI)
 # ==========================================
-# ==========================================
-    # 🍎 [Task 1-B] 아이폰(iOS) 전용 홈 화면 아이콘 강제 주입
-    # ==========================================
-    import streamlit.components.v1 as components
-    components.html("""
-        <script>
-            // 부모 창의 HTML 헤더에 아이폰 전용 터치 아이콘(apple-touch-icon)을 몰래 심습니다.
-            const link = window.parent.document.createElement('link');
-            link.rel = 'apple-touch-icon';
-            link.href = 'https://cdn-icons-png.flaticon.com/512/833/833472.png'; // 예쁜 하트 아이콘 이미지
-            window.parent.document.head.appendChild(link);
-        </script>
-    """, height=0, width=0)
 st.markdown("""
     <style>
     .pwa-banner {
@@ -38,10 +40,138 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# (주의: 이 위쪽 어딘가에 비밀번호를 통과했다는 if 문이 있어야 합니다!)
+
+# --- 🌐 한국 시간(KST) 설정 ---
+KST = pytz.timezone('Asia/Seoul')
+now_kst = datetime.datetime.now(KST)
+today_str = str(now_kst.date())
+current_time_str = now_kst.strftime("%H:%M")
+
+# --- 🚀 구글 시트 연동 설정 ---
+@st.cache_resource
+def get_google_sheets():
+    scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+    if "google_auth" in st.secrets:
+        token_info = json.loads(st.secrets["google_auth"]["token"])
+        creds = Credentials.from_authorized_user_info(token_info, scopes)
+    else:
+        creds = Credentials.from_authorized_user_file('token.json', scopes)
+    client = gspread.authorize(creds)
+    doc = client.open('couple_app_data')
     
+    return {
+        "main": doc.worksheet('시트1'),
+        "memo": doc.worksheet('쪽지함'),
+        "time": doc.worksheet('타임라인'),
+        "date": doc.worksheet('데이트일정'),
+        "wish": doc.worksheet('위시리스트'),
+        "review": doc.worksheet('데이트후기')
+    }
+
+sheets = get_google_sheets()
+sheet_main = sheets["main"]
+sheet_memo = sheets["memo"]
+sheet_time = sheets["time"]
+sheet_date = sheets["date"]
+sheet_wish = sheets["wish"]
+sheet_review = sheets["review"]
+
+def load_data():
+    try:
+        val = sheet_main.acell('A1').value
+        main_data = json.loads(val) if val else {}
+    except:
+        main_data = {}
+
+    def get_large_data(sheet_obj):
+        try:
+            vals = sheet_obj.col_values(1)[1:]
+            if not vals:
+                return []
+            joined_str = "".join(vals)
+            return json.loads(joined_str)
+        except Exception as e:
+            st.error(f"{sheet_obj.title} 데이터를 읽는 중 문제 발생: {e}")
+            return []
+
+    return {
+        "notice": main_data.get("notice", "비타민 챙겨 먹기! 오늘 하루도 화이팅 ✨"),
+        "promises": main_data.get("promises", [{"text": "서운한 건 그날 바로 말하기 🗣️", "by": "수기남자친구"}]),
+        "moods": main_data.get("moods", {"수기남자친구": "🙂", "수기": "🙂"}),
+        "mood_history": main_data.get("mood_history", []),
+        "current_mood_date": main_data.get("current_mood_date", today_str),
+        "menu_list": main_data.get("menu_list", ["삼겹살", "초밥"]),
+        "memo_history": get_large_data(sheet_memo),
+        "timeline": get_large_data(sheet_time),
+        "date_schedules": get_large_data(sheet_date),
+        "wishlist": get_large_data(sheet_wish),
+        "reviews": get_large_data(sheet_review),
+        "qna_data": main_data.get("qna_data", {})
+    }
+
+def save_data():
+    main_data = {
+        "notice": st.session_state.notice,
+        "promises": st.session_state.promises,
+        "moods": st.session_state.moods,
+        "mood_history": st.session_state.mood_history,
+        "current_mood_date": st.session_state.current_mood_date,
+        "menu_list": st.session_state.menu_list,
+        "qna_data": st.session_state.qna_data
+    }
+    sheet_main.update_acell('A1', json.dumps(main_data))
+    
+    def save_large_data(sheet_obj, data_list):
+        if not data_list:
+            return
+        json_str = json.dumps(data_list)
+        chunks = [json_str[i:i+40000] for i in range(0, len(json_str), 40000)]
+        cell_values = [[chunk] for chunk in chunks]
+        
+        sheet_obj.batch_clear(['A2:A'])
+        sheet_obj.update(values=cell_values, range_name='A2', value_input_option='RAW')
+
+    import time
+    save_large_data(sheet_memo, st.session_state.memo_history)
+    time.sleep(1.2)
+    save_large_data(sheet_time, st.session_state.timeline)
+    time.sleep(1.2)
+    save_large_data(sheet_date, st.session_state.date_schedules)
+    time.sleep(1.2)
+    save_large_data(sheet_wish, st.session_state.wishlist)
+    time.sleep(1.2)
+    save_large_data(sheet_review, st.session_state.reviews)
+
+# --- 보안 설정 ---
+def check_password():
+    if "password_correct" not in st.session_state: st.session_state["password_correct"] = False
+    if st.session_state["password_correct"]: return True
+    
+    st.markdown("<h1 style='text-align: center; color: #FF85A2;'>♥ 수기 커플 노트</h1>", unsafe_allow_html=True)
+    pwd = st.text_input("우리 둘만의 비밀번호", type="password")
+    if st.button("사랑으로 열기 ♥"):
+        if pwd == "6146":  
+            st.session_state["password_correct"] = True
+            st.rerun()
+        else: st.error("비밀번호가 틀렸어!")
+    return False
+
+# --- 메인 로직 시작 ---
+if check_password():
+    if 'data_loaded' not in st.session_state:
+        saved_data = load_data()
+        for key, value in saved_data.items():
+            st.session_state[key] = value
+        st.session_state['photos'] = [] 
+        st.session_state['data_loaded'] = True
+        
+        if st.session_state.current_mood_date != today_str:
+            st.session_state.moods = {"수기남자친구": "🙂", "수기": "🙂"}
+            st.session_state.current_mood_date = today_str
+            save_data()
+
     # ==========================================
-    # 💌 [Task 2] 매일매일 30문 30답 (대문 안쪽으로 숨김 완료!)
+    # 💌 [Task 2] 매일매일 30문 30답 (안전하게 자물쇠 안쪽으로 이동!)
     # ==========================================
     qna_list = [
         "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?",
@@ -102,141 +232,6 @@ st.markdown("""
             save_data()
             st.success("두 사람의 소중한 답변이 영구 저장되었습니다! ✨")
 
-# --- 🌐 한국 시간(KST) 설정 ---
-KST = pytz.timezone('Asia/Seoul')
-now_kst = datetime.datetime.now(KST)
-today_str = str(now_kst.date())
-current_time_str = now_kst.strftime("%H:%M")
-
-# --- 🚀 구글 시트 연동 설정 ---
-@st.cache_resource
-def get_google_sheets():
-    scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
-    if "google_auth" in st.secrets:
-        token_info = json.loads(st.secrets["google_auth"]["token"])
-        creds = Credentials.from_authorized_user_info(token_info, scopes)
-    else:
-        creds = Credentials.from_authorized_user_file('token.json', scopes)
-    client = gspread.authorize(creds)
-    doc = client.open('couple_app_data')
-    
-    # 6개의 방을 찾는 작업 자체를 캐시에 가둬버립니다 (구글 API 차단 영구 방지!)
-    return {
-        "main": doc.worksheet('시트1'),
-        "memo": doc.worksheet('쪽지함'),
-        "time": doc.worksheet('타임라인'),
-        "date": doc.worksheet('데이트일정'),
-        "wish": doc.worksheet('위시리스트'),
-        "review": doc.worksheet('데이트후기')
-    }
-
-# 캐시된 방 목록을 불러와서 변수에 예쁘게 담아줍니다
-sheets = get_google_sheets()
-sheet_main = sheets["main"]
-sheet_memo = sheets["memo"]
-sheet_time = sheets["time"]
-sheet_date = sheets["date"]
-sheet_wish = sheets["wish"]
-sheet_review = sheets["review"]
-
-def load_data():
-    try:
-        val = sheet_main.acell('A1').value
-        main_data = json.loads(val) if val else {}
-    except:
-        main_data = {}
-
-    def get_large_data(sheet_obj):
-        try:
-            vals = sheet_obj.col_values(1)[1:]
-            if not vals:
-                return []
-            joined_str = "".join(vals)
-            return json.loads(joined_str)
-        except Exception as e:
-            # 🚨 침묵의 에러 방지: 문제가 생기면 화면에 즉시 에러를 토해내도록 수정!
-            st.error(f"{sheet_obj.title} 데이터를 읽는 중 문제 발생: {e}")
-            return []
-
-    return {
-        "notice": main_data.get("notice", "비타민 챙겨 먹기! 오늘 하루도 화이팅 ✨"),
-        "promises": main_data.get("promises", [{"text": "서운한 건 그날 바로 말하기 🗣️", "by": "수기남자친구"}]),
-        "moods": main_data.get("moods", {"수기남자친구": "🙂", "수기": "🙂"}),
-        "mood_history": main_data.get("mood_history", []),
-        "current_mood_date": main_data.get("current_mood_date", today_str),
-        "menu_list": main_data.get("menu_list", ["삼겹살", "초밥"]),
-        "memo_history": get_large_data(sheet_memo),
-        "timeline": get_large_data(sheet_time),
-        "date_schedules": get_large_data(sheet_date),
-        "wishlist": get_large_data(sheet_wish),
-        "reviews": get_large_data(sheet_review),
-        "qna_data": main_data.get("qna_data", {})
-    }
-
-def save_data():
-    main_data = {
-        "notice": st.session_state.notice,
-        "promises": st.session_state.promises,
-        "moods": st.session_state.moods,
-        "mood_history": st.session_state.mood_history,
-        "current_mood_date": st.session_state.current_mood_date,
-        "menu_list": st.session_state.menu_list,
-        "qna_data": st.session_state.qna_data
-    }
-    sheet_main.update_acell('A1', json.dumps(main_data))
-    
-    def save_large_data(sheet_obj, data_list):
-        if not data_list:
-            return
-        json_str = json.dumps(data_list)
-        chunks = [json_str[i:i+40000] for i in range(0, len(json_str), 40000)]
-        cell_values = [[chunk] for chunk in chunks]
-        
-        sheet_obj.batch_clear(['A2:A'])
-        # 🛡️ 핵심 방어: 구글 시트가 맘대로 서식을 못 바꾸게 'RAW(날것)' 옵션 강제 주입!
-        sheet_obj.update(values=cell_values, range_name='A2', value_input_option='RAW')
-
-    import time
-    save_large_data(sheet_memo, st.session_state.memo_history)
-    time.sleep(1.2)
-    save_large_data(sheet_time, st.session_state.timeline)
-    time.sleep(1.2)
-    save_large_data(sheet_date, st.session_state.date_schedules)
-    time.sleep(1.2)
-    save_large_data(sheet_wish, st.session_state.wishlist)
-    time.sleep(1.2)
-    save_large_data(sheet_review, st.session_state.reviews)
-
-# --- 보안 설정 ---
-def check_password():
-    if "password_correct" not in st.session_state: st.session_state["password_correct"] = False
-    if st.session_state["password_correct"]: return True
-    
-    # 텍스트 하트(♥)를 사용하여 타이틀과 하트 색상을 파스텔 핑크로 완전 통일
-    st.markdown("<h1 style='text-align: center; color: #FF85A2;'>♥ 수기 커플 노트</h1>", unsafe_allow_html=True)
-    pwd = st.text_input("우리 둘만의 비밀번호", type="password")
-    if st.button("사랑으로 열기 ♥"):
-        if pwd == "6146":  
-            st.session_state["password_correct"] = True
-            st.rerun()
-        else: st.error("비밀번호가 틀렸어!")
-    return False
-
-# --- 메인 로직 시작 ---
-if check_password():
-    if 'data_loaded' not in st.session_state:
-        saved_data = load_data()
-        for key, value in saved_data.items():
-            st.session_state[key] = value
-        st.session_state['photos'] = [] 
-        st.session_state['data_loaded'] = True
-        
-        # 기분 초기화
-        if st.session_state.current_mood_date != today_str:
-            st.session_state.moods = {"수기남자친구": "🙂", "수기": "🙂"}
-            st.session_state.current_mood_date = today_str
-            save_data()
-
     # ==========================================
     # 📌 접속자 확인 및 다크모드 무력화 배경색 설정
     # ==========================================
@@ -245,16 +240,14 @@ if check_password():
         user_name_only = "수기남자친구" if "남자친구" in user_type else "수기"
         
         if user_name_only == "수기":
-            bg_color = "#FFF5F7" # 연한 파스텔 핑크
+            bg_color = "#FFF5F7" 
             accent_color = "#FF85A2"
             user_icon = "👧"
         else:
-            bg_color = "#E3F2FD" # 연한 파스텔 블루
+            bg_color = "#E3F2FD" 
             accent_color = "#4B89FF"
             user_icon = "👦"
 
-    # [핵심] 다크모드 무력화, 순백색 입력창 및 사이드바 강제 적용 CSS
-    # 실제 물리적 배경 레이어 생성 (항상 켜짐)
     st.markdown(f"""
         <div class="custom-bg-layer" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: {bg_color}; z-index: -99999; pointer-events: none;"></div>
         """, unsafe_allow_html=True)
@@ -263,7 +256,6 @@ if check_password():
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Gamja+Flower&display=swap');
         
-        /* 1. 폰트 및 기본 글씨색을 무조건 어둡게 고정 (다크모드 무력화) */
         html, body, p, h1, h2, h3, h4, h5, h6, span, label, button, input, textarea, select, div[data-testid="stMetricValue"], .stMarkdown, .stText {{
             font-family: 'Gamja Flower', sans-serif !important;
             color: #333333 !important;
@@ -273,20 +265,17 @@ if check_password():
             color: #333333 !important;
         }}
 
-        /* 2. 스트림릿 기본 하얀/까만 덮개를 모두 '투명'하게 만들어 파스텔 색상이 비치게 함 */
         html, body, .stApp, .main, [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"], [data-testid="stHeader"] {{
             background-color: transparent !important;
             background: transparent !important;
         }}
         
-        /* 3. [요청 반영] 입력창 및 텍스트 에어리어 '순백색' 고정 */
         input, textarea, select, div.stTextInput > div > div > input, div.stTextArea > div > div > textarea {{
             background-color: #ffffff !important;
             color: #333333 !important;
             border: 1px solid #cccccc !important;
         }}
         
-        /* 4. [요청 반영] 사이드바 투명도 0% (겹침 방지 순백색 고정) */
         [data-testid="stSidebar"], [data-testid="stSidebar"] > div:first-child {{ 
             background-color: #ffffff !important; 
             opacity: 1 !important;
@@ -294,7 +283,6 @@ if check_password():
             box-shadow: 2px 0px 10px rgba(0,0,0,0.05) !important;
         }}
         
-        /* 5. 카드 및 확장 메뉴도 깔끔하게 순백색 */
         .card, [data-testid="stExpander"] {{ 
             background-color: #ffffff !important; 
             border-radius: 15px; 
@@ -304,7 +292,6 @@ if check_password():
             box-shadow: 2px 2px 10px rgba(0,0,0,0.05); 
         }}
         
-        /* 기타 포인트 요소 */
         .user-boy {{ border-left: 5px solid #4B89FF; text-align: left; }}
         .user-girl {{ border-right: 5px solid #FF85A2; text-align: right; }}
         .time-text {{ font-size: 0.8rem; color: gray !important; }}
@@ -313,9 +300,6 @@ if check_password():
         </style>
         """, unsafe_allow_html=True)
 
-    # ==========================================
-    # 📌 시인성 200% 사이드바 알림 배너
-    # ==========================================
     st.markdown("""
         <div style="background-color: #ffffff; padding: 12px; border-radius: 10px; border: 2px dashed #FF85A2; text-align: center; margin-bottom: 15px; box-shadow: 0px 4px 6px rgba(0,0,0,0.05);">
             <span style="font-size: 1.1rem; font-weight: bold; color: #FF85A2;">🚨 스마트폰 접속 시 필독! 🚨</span><br>
@@ -323,7 +307,6 @@ if check_password():
         </div>
         """, unsafe_allow_html=True)
 
-    # 상단 헤더 (텍스트 하트 교체 및 파스텔 핑크 색상 통일)
     col_h1, col_h2 = st.columns([0.85, 0.15])
     col_h1.markdown(f"<h2 style='color: #FF85A2; margin:0;'>♥ 수기 커플 노트</h2>", unsafe_allow_html=True)
     if col_h2.button("🔄"):
@@ -342,7 +325,7 @@ if check_password():
             </div>
             """, unsafe_allow_html=True)
             
-        start_date = datetime.date(2026, 1, 1) # 사귄 날짜 수정하세요!
+        start_date = datetime.date(2026, 1, 1) 
         days_passed = (now_kst.date() - start_date).days
         st.markdown(f"### 🌸 우리의 D-Day")
         st.metric(label=f"연애 시작일: {start_date}", value=f"D + {days_passed}일")
@@ -381,8 +364,6 @@ if check_password():
     # ==========================================
     tabs = st.tabs(["💕 데이트", "💌 쪽지함", "📸 사진첩", "⏳ 타임라인", "😋 오늘 뭐 먹지?", "📍 장소/기록"])
 
-    
-    # --- 탭 1: 데이트 ---
     with tabs[0]:
         st.subheader("🗓️ 우리의 데이트 일정")
         with st.form("schedule_form", clear_on_submit=True):
@@ -436,7 +417,6 @@ if check_password():
         st.write(f"👦 수기남자친구: {st.session_state.moods['수기남자친구']} ({mood_desc[st.session_state.moods['수기남자친구']]})")
         st.write(f"👧 수기: {st.session_state.moods['수기']} ({mood_desc[st.session_state.moods['수기']]})")
 
-    # --- 탭 2: 쪽지함 ---
     with tabs[1]:
         st.subheader("💌 오늘의 쪽지 (수정은 당일만!)")
         my_today_memo_idx = None
@@ -469,7 +449,6 @@ if check_password():
             align_cls = "user-boy" if is_boy else "user-girl"
             st.markdown(f'<div class="card {align_cls}"><small><b>{m["user"]}</b> | {m["date"]}</small><p style="margin: 5px 0;">{m["content"]}</p><span class="time-text">{m["time"]}</span></div>', unsafe_allow_html=True)
 
-    # --- 탭 3: 사진첩 ---
     with tabs[2]:
         st.subheader("📸 임시 사진첩")
         img_file = st.file_uploader("사진 올리기", type=["jpg", "png"])
@@ -479,7 +458,6 @@ if check_password():
         for p in st.session_state.photos:
             st.image(p['img'], caption=f"{p['date']} by {p['user']}", use_container_width=True)
 
-    # --- 탭 4: 타임라인 ---
     with tabs[3]:
         st.subheader("⏳ 타임라인")
         with st.form("timeline_form", clear_on_submit=True):
@@ -493,7 +471,6 @@ if check_password():
         for item in st.session_state.timeline:
             st.markdown(f'<div class="card"><b>{item["date"]}</b> ({item.get("by", "")})<br>{item["event"]}</div>', unsafe_allow_html=True)
 
-    # --- 탭 5: 오늘 뭐 먹지? ---
     with tabs[4]:
         st.subheader("🎰 메뉴 돌림판")
         if st.button("메뉴 랜덤 뽑기! 🎲"):
@@ -520,7 +497,6 @@ if check_password():
                     save_data()
                     st.rerun()
 
-    # --- 탭 6: 장소/기록 ---
     with tabs[5]:
         st.subheader("📍 우리의 위시리스트")
         with st.form("w_form", clear_on_submit=True):
