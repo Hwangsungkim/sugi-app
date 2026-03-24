@@ -11,6 +11,19 @@ st.set_page_config(page_title="수기 커플 노트", page_icon="❤️", layout
 # ==========================================
 # 📱 [Task 1] PWA 앱 설치 유도 배너 (반응형 UI)
 # ==========================================
+# ==========================================
+    # 🍎 [Task 1-B] 아이폰(iOS) 전용 홈 화면 아이콘 강제 주입
+    # ==========================================
+    import streamlit.components.v1 as components
+    components.html("""
+        <script>
+            // 부모 창의 HTML 헤더에 아이폰 전용 터치 아이콘(apple-touch-icon)을 몰래 심습니다.
+            const link = window.parent.document.createElement('link');
+            link.rel = 'apple-touch-icon';
+            link.href = 'https://cdn-icons-png.flaticon.com/512/833/833472.png'; // 예쁜 하트 아이콘 이미지
+            window.parent.document.head.appendChild(link);
+        </script>
+    """, height=0, width=0)
 st.markdown("""
     <style>
     .pwa-banner {
@@ -25,69 +38,69 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# ==========================================
-# 💌 [Task 2] 매일매일 30문 30답 (Atomic Logic)
-# ==========================================
-qna_list = [
-    "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?",
-    "2. 서로에게 가장 반했던 결정적인 순간은 언제야?",
-    "3. 내가 가장 사랑스러워 보일 때는 언제야?",
-    "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?",
-    "5. 지금 당장 훌쩍 떠난다면 같이 가고 싶은 여행지는?",
-    "6. 지금까지 우리의 가장 완벽했던 데이트는 언제였어?",
-    "7. 우리의 첫 키스(뽀뽀) 때 어떤 기분이었어?",
-    "8. 내가 해준 음식 중 최고의 메뉴는?",
-    "9. 서로의 연락처 저장명과 그렇게 정한 이유는 뭐야?",
-    "10. 화났을 때 내 기분을 100% 풀어주는 최고의 방법은?",
-    "11. 나에게 들었던 가장 감동적인 말은 무엇이었어?",
-    "12. 꼭 같이 배워보고 싶은 취미나 운동이 있다면?",
-    "13. 나의 어떤 점을 가장 닮고 싶어?",
-    "14. 지금까지 만나면서 나에게 가장 고마웠던 순간은?",
-    "15. 싸웠을 때 우리의 암묵적인 룰을 하나 정한다면?",
-    "16. 나를 생각하면 가장 먼저 떠오르는 노래는?",
-    "17. 내가 가장 섹시해(멋있어/예뻐) 보일 때는 언제야?",
-    "18. 서로에게 주고 싶은 가장 특별하고 의미 있는 선물은?",
-    "19. 우리의 첫 데이트 때, 겉으론 안 그랬지만 속마음은 어땠어?",
-    "20. 나를 동물로 표현한다면 어떤 동물이고 이유는 뭐야?",
-    "21. 우리의 연애를 영화 장르로 따지면 어떤 장르일까?",
-    "22. 하루 동안 서로 몸이 바뀐다면 가장 해보고 싶은 것은?",
-    "23. 서로의 가족에게 해주고 싶은 작은 이벤트가 있다면?",
-    "24. 폰에 있는 우리의 커플 사진 중 가장 좋아하는 사진은?",
-    "25. 나를 만나고 나서 긍정적으로 변한 점이 있다면?",
-    "26. 1년 뒤 오늘, 우리는 어떤 모습으로 무엇을 하고 있을까?",
-    "27. 10년 뒤 우리는 서로에게 어떤 사람일까?",
-    "28. 이번 주말, 나랑 하루 종일 방 안에서만 놀기 vs 하루 종일 밖에서 놀기",
-    "29. 서로에게 절대 변치 말자고 엄지 걸고 약속하고 싶은 것 1가지는?",
-    "30. 지금 당장 상대방을 꽉 안아주면서 해주고 싶은 말은?"
-]
-
-# 오늘 날짜를 기준으로 매일 1개씩 순환하는 알고리즘
-import datetime
-today_ordinal = datetime.datetime.now().toordinal()
-q_index = today_ordinal % 30
-today_question = qna_list[q_index]
-q_key = f"qna_{q_index}"
-
-# 오늘의 데이터 불러오기
-if "qna_data" not in st.session_state:
-    st.session_state.qna_data = {}
-if q_key not in st.session_state.qna_data:
-    st.session_state.qna_data[q_key] = {"hodl": "", "sugi": ""}
-
-with st.expander(f"💌 오늘의 문답 (D-{30 - q_index}일 남음)", expanded=True):
-    st.subheader(today_question)
+# (주의: 이 위쪽 어딘가에 비밀번호를 통과했다는 if 문이 있어야 합니다!)
     
-    col1, col2 = st.columns(2)
-    with col1:
-        hodl_ans = st.text_area("👦 HODL님의 답변", value=st.session_state.qna_data[q_key]["hodl"], height=100)
-    with col2:
-        sugi_ans = st.text_area("👩 수기님의 답변", value=st.session_state.qna_data[q_key]["sugi"], height=100)
+    # ==========================================
+    # 💌 [Task 2] 매일매일 30문 30답 (대문 안쪽으로 숨김 완료!)
+    # ==========================================
+    qna_list = [
+        "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?",
+        "2. 서로에게 가장 반했던 결정적인 순간은 언제야?",
+        "3. 내가 가장 사랑스러워 보일 때는 언제야?",
+        "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?",
+        "5. 지금 당장 훌쩍 떠난다면 같이 가고 싶은 여행지는?",
+        "6. 지금까지 우리의 가장 완벽했던 데이트는 언제였어?",
+        "7. 우리의 첫 키스(뽀뽀) 때 어떤 기분이었어?",
+        "8. 내가 해준 음식 중 최고의 메뉴는?",
+        "9. 서로의 연락처 저장명과 그렇게 정한 이유는 뭐야?",
+        "10. 화났을 때 내 기분을 100% 풀어주는 최고의 방법은?",
+        "11. 나에게 들었던 가장 감동적인 말은 무엇이었어?",
+        "12. 꼭 같이 배워보고 싶은 취미나 운동이 있다면?",
+        "13. 나의 어떤 점을 가장 닮고 싶어?",
+        "14. 지금까지 만나면서 나에게 가장 고마웠던 순간은?",
+        "15. 싸웠을 때 우리의 암묵적인 룰을 하나 정한다면?",
+        "16. 나를 생각하면 가장 먼저 떠오르는 노래는?",
+        "17. 내가 가장 섹시해(멋있어/예뻐) 보일 때는 언제야?",
+        "18. 서로에게 주고 싶은 가장 특별하고 의미 있는 선물은?",
+        "19. 우리의 첫 데이트 때, 겉으론 안 그랬지만 속마음은 어땠어?",
+        "20. 나를 동물로 표현한다면 어떤 동물이고 이유는 뭐야?",
+        "21. 우리의 연애를 영화 장르로 따지면 어떤 장르일까?",
+        "22. 하루 동안 서로 몸이 바뀐다면 가장 해보고 싶은 것은?",
+        "23. 서로의 가족에게 해주고 싶은 작은 이벤트가 있다면?",
+        "24. 폰에 있는 우리의 커플 사진 중 가장 좋아하는 사진은?",
+        "25. 나를 만나고 나서 긍정적으로 변한 점이 있다면?",
+        "26. 1년 뒤 오늘, 우리는 어떤 모습으로 무엇을 하고 있을까?",
+        "27. 10년 뒤 우리는 서로에게 어떤 사람일까?",
+        "28. 이번 주말, 나랑 하루 종일 방 안에서만 놀기 vs 하루 종일 밖에서 놀기",
+        "29. 서로에게 절대 변치 말자고 엄지 걸고 약속하고 싶은 것 1가지는?",
+        "30. 지금 당장 상대방을 꽉 안아주면서 해주고 싶은 말은?"
+    ]
+
+    import datetime
+    today_ordinal = datetime.datetime.now().toordinal()
+    q_index = today_ordinal % 30
+    today_question = qna_list[q_index]
+    q_key = f"qna_{q_index}"
+
+    if "qna_data" not in st.session_state:
+        st.session_state.qna_data = {}
+    if q_key not in st.session_state.qna_data:
+        st.session_state.qna_data[q_key] = {"hodl": "", "sugi": ""}
+
+    with st.expander(f"💌 오늘의 문답 (D-{30 - q_index}일 남음)", expanded=True):
+        st.subheader(today_question)
         
-    if st.button("답변 꾹 저장하기 💾"):
-        st.session_state.qna_data[q_key]["hodl"] = hodl_ans
-        st.session_state.qna_data[q_key]["sugi"] = sugi_ans
-        save_data()
-        st.success("두 사람의 소중한 답변이 영구 저장되었습니다! ✨")
+        col1, col2 = st.columns(2)
+        with col1:
+            hodl_ans = st.text_area("👦 HODL님의 답변", value=st.session_state.qna_data[q_key]["hodl"], height=100)
+        with col2:
+            sugi_ans = st.text_area("👩 수기님의 답변", value=st.session_state.qna_data[q_key]["sugi"], height=100)
+            
+        if st.button("답변 꾹 저장하기 💾"):
+            st.session_state.qna_data[q_key]["hodl"] = hodl_ans
+            st.session_state.qna_data[q_key]["sugi"] = sugi_ans
+            save_data()
+            st.success("두 사람의 소중한 답변이 영구 저장되었습니다! ✨")
 
 # --- 🌐 한국 시간(KST) 설정 ---
 KST = pytz.timezone('Asia/Seoul')
