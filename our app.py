@@ -258,6 +258,28 @@ if check_password():
     # ==========================================
     tabs = st.tabs(["💕 데이트", "💌 쪽지함", "📸 사진첩", "⏳ 타임라인", "😋 오늘 뭐 먹지?", "📍 장소/기록"])
 
+# ==========================================
+    # 🚨 [1회용 이삿짐 센터] 과거 추억 마이그레이션 버튼
+    # ==========================================
+    st.markdown("---")
+    if st.button("🚚 옛날 추억 모두 새 방으로 이사하기!"):
+        old_val = sheet_main.acell('A1').value
+        if old_val:
+            old_data = json.loads(old_val)
+            # 과거 데이터 뒤에 현재 데이터(입주 테스트)를 이어붙여서 세션에 저장
+            st.session_state.memo_history = old_data.get("memo_history", []) + st.session_state.memo_history
+            st.session_state.timeline = old_data.get("timeline", []) + st.session_state.timeline
+            st.session_state.date_schedules = old_data.get("date_schedules", []) + st.session_state.date_schedules
+            st.session_state.wishlist = old_data.get("wishlist", []) + st.session_state.wishlist
+            st.session_state.reviews = old_data.get("reviews", []) + st.session_state.reviews
+            
+            # 새로워진 세션 데이터를 5개의 새 방(A2 셀)에 일괄 발사!
+            save_data() 
+            st.success("🎉 추억 이사 완벽하게 성공! 화면을 새로고침(F5) 해주세요!")
+        else:
+            st.warning("이사할 옛날 데이터가 없습니다.")
+    st.markdown("---")
+    
     # --- 탭 1: 데이트 ---
     with tabs[0]:
         st.subheader("🗓️ 우리의 데이트 일정")
