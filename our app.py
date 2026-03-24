@@ -292,12 +292,13 @@ if check_password():
     st.markdown("---")
     if st.button("🚚 옛날 추억 모두 새 방으로 이사하기!"):
         try:
-            # 시트1이 아니라 절대 안전한 '백업본' 탭에서 데이터를 캐냅니다!
-            sheet_backup = doc.worksheet('백업본') 
+            # 🛠️ 핵심 수술: sheet_main을 통해 원본 문서를 역추적하여 백업본을 찾아냅니다!
+            sheet_backup = sheet_main.spreadsheet.worksheet('백업본') 
             old_val = sheet_backup.acell('A1').value
             
             if old_val:
                 old_data = json.loads(old_val)
+                
                 # 과거 데이터 가져와서 현재 빈 데이터에 합치기
                 st.session_state.memo_history = old_data.get("memo_history", []) + st.session_state.memo_history
                 st.session_state.timeline = old_data.get("timeline", []) + st.session_state.timeline
@@ -307,7 +308,7 @@ if check_password():
                 
                 # 조각화(Sharding) 방식으로 5개의 새 방에 일괄 저장!
                 save_data() 
-                st.success("🎉 추억 이사 완벽하게 성공! 구글 시트의 5개 방을 확인해 보세요!")
+                st.success("🎉 추억 이사 완벽하게 성공! 화면을 새로고침(F5) 해주세요!")
             else:
                 st.warning("백업본 시트의 A1 셀이 비어있습니다. 타임머신 복구를 다시 확인해 주세요.")
         except Exception as e:
