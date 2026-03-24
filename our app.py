@@ -15,16 +15,15 @@ st.set_page_config(page_title="수기 커플 노트", page_icon="❤️", layout
 import streamlit.components.v1 as components
 components.html("""
     <script>
-        // 부모 창의 HTML 헤더에 아이폰 전용 터치 아이콘(apple-touch-icon)을 몰래 심습니다.
         const link = window.parent.document.createElement('link');
         link.rel = 'apple-touch-icon';
-        link.href = 'https://cdn-icons-png.flaticon.com/512/833/833472.png'; // 예쁜 하트 아이콘 이미지
+        link.href = 'https://cdn-icons-png.flaticon.com/512/833/833472.png'; 
         window.parent.document.head.appendChild(link);
     </script>
 """, height=0, width=0)
 
 # ==========================================
-# 📱 [Task 1] PWA 앱 설치 유도 배너 (반응형 UI)
+# 📱 [Task 1] PWA 앱 설치 유도 배너
 # ==========================================
 st.markdown("""
     <style>
@@ -36,7 +35,7 @@ st.markdown("""
     }
     </style>
     <div class="pwa-banner">
-        💡 꿀팁: 사파리/크롬 하단 [공유] ➔ [홈 화면에 추가]를 누르면 진짜 앱이 됩니다! ❤️
+        💡 꿀팁: 아이폰 단축어 앱을 사용하면 우리 사진으로 예쁜 아이콘을 만들 수 있어요! ❤️
     </div>
 """, unsafe_allow_html=True)
 
@@ -106,7 +105,8 @@ def load_data():
         "date_schedules": get_large_data(sheet_date),
         "wishlist": get_large_data(sheet_wish),
         "reviews": get_large_data(sheet_review),
-        "qna_data": main_data.get("qna_data", {})
+        "qna_data": main_data.get("qna_data", {}),
+        "time_capsules": main_data.get("time_capsules", []) # 🎁 타임캡슐 데이터 공간 추가!
     }
 
 def save_data():
@@ -117,7 +117,8 @@ def save_data():
         "mood_history": st.session_state.mood_history,
         "current_mood_date": st.session_state.current_mood_date,
         "menu_list": st.session_state.menu_list,
-        "qna_data": st.session_state.qna_data
+        "qna_data": st.session_state.qna_data,
+        "time_capsules": st.session_state.time_capsules # 🎁 타임캡슐 저장 로직
     }
     sheet_main.update_acell('A1', json.dumps(main_data))
     
@@ -171,7 +172,7 @@ if check_password():
             save_data()
 
     # ==========================================
-    # 💌 [Task 2] 매일매일 30문 30답 (안전하게 자물쇠 안쪽으로 이동!)
+    # 💌 [Task 2] 매일매일 30문 30답
     # ==========================================
     qna_list = [
         "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?",
@@ -206,8 +207,7 @@ if check_password():
         "30. 지금 당장 상대방을 꽉 안아주면서 해주고 싶은 말은?"
     ]
 
-    import datetime
-    today_ordinal = datetime.datetime.now().toordinal()
+    today_ordinal = datetime.datetime.now(KST).toordinal()
     q_index = today_ordinal % 30
     today_question = qna_list[q_index]
     q_key = f"qna_{q_index}"
@@ -233,21 +233,40 @@ if check_password():
             st.success("두 사람의 소중한 답변이 영구 저장되었습니다! ✨")
 
     # ==========================================
-    # 📌 접속자 확인 및 다크모드 무력화 배경색 설정
+    # 📌 🌙 낮/밤 커플 테마 자동 전환 로직 (UI G)
     # ==========================================
     with st.sidebar:
         user_type = st.radio("👤 접속자", ["수기남자친구 👦", "수기 👧"])
         user_name_only = "수기남자친구" if "남자친구" in user_type else "수기"
         
-        if user_name_only == "수기":
-            bg_color = "#FFF5F7" 
-            accent_color = "#FF85A2"
-            user_icon = "👧"
+        current_hour = now_kst.hour
+        is_night = current_hour >= 19 or current_hour <= 6 # 저녁 7시 ~ 아침 6시 야간 모드
+        
+        if is_night:
+            # 🌙 [야간 모드] 심야의 감성 테마
+            bg_color = "#1A1A2E" 
+            card_bg = "#16213E"
+            text_color = "#E0E0E0"
+            input_bg = "#0F3460"
+            border_color = "#2E3B5E"
+            accent_color = "#E94560" if user_name_only == "수기" else "#4B89FF"
+            user_icon = "👧" if user_name_only == "수기" else "👦"
         else:
-            bg_color = "#E3F2FD" 
-            accent_color = "#4B89FF"
-            user_icon = "👦"
+            # ☀️ [주간 모드] 화사한 파스텔 테마
+            text_color = "#333333"
+            card_bg = "#ffffff"
+            input_bg = "#ffffff"
+            border_color = "#eeeeee"
+            if user_name_only == "수기":
+                bg_color = "#FFF5F7" 
+                accent_color = "#FF85A2"
+                user_icon = "👧"
+            else:
+                bg_color = "#E3F2FD" 
+                accent_color = "#4B89FF"
+                user_icon = "👦"
 
+    # 스마트 CSS 렌더링 (낮/밤 변수 동기화)
     st.markdown(f"""
         <div class="custom-bg-layer" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: {bg_color}; z-index: -99999; pointer-events: none;"></div>
         """, unsafe_allow_html=True)
@@ -258,11 +277,11 @@ if check_password():
         
         html, body, p, h1, h2, h3, h4, h5, h6, span, label, button, input, textarea, select, div[data-testid="stMetricValue"], .stMarkdown, .stText {{
             font-family: 'Gamja Flower', sans-serif !important;
-            color: #333333 !important;
+            color: {text_color} !important;
         }}
         .material-symbols-rounded, [data-testid="stIconMaterial"] {{
             font-family: 'Material Symbols Rounded' !important;
-            color: #333333 !important;
+            color: {text_color} !important;
         }}
 
         html, body, .stApp, .main, [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"], [data-testid="stHeader"] {{
@@ -271,39 +290,39 @@ if check_password():
         }}
         
         input, textarea, select, div.stTextInput > div > div > input, div.stTextArea > div > div > textarea {{
-            background-color: #ffffff !important;
-            color: #333333 !important;
-            border: 1px solid #cccccc !important;
+            background-color: {input_bg} !important;
+            color: {text_color} !important;
+            border: 1px solid {border_color} !important;
         }}
         
         [data-testid="stSidebar"], [data-testid="stSidebar"] > div:first-child {{ 
-            background-color: #ffffff !important; 
+            background-color: {card_bg} !important; 
             opacity: 1 !important;
-            border-right: 1px solid #eeeeee !important;
+            border-right: 1px solid {border_color} !important;
             box-shadow: 2px 0px 10px rgba(0,0,0,0.05) !important;
         }}
         
         .card, [data-testid="stExpander"] {{ 
-            background-color: #ffffff !important; 
+            background-color: {card_bg} !important; 
             border-radius: 15px; 
             padding: 15px; 
             margin-bottom: 15px; 
-            border: 1px solid rgba(128, 128, 128, 0.2) !important; 
+            border: 1px solid {border_color} !important; 
             box-shadow: 2px 2px 10px rgba(0,0,0,0.05); 
         }}
         
         .user-boy {{ border-left: 5px solid #4B89FF; text-align: left; }}
         .user-girl {{ border-right: 5px solid #FF85A2; text-align: right; }}
         .time-text {{ font-size: 0.8rem; color: gray !important; }}
-        div.stButton > button {{ border-radius: 20px; font-weight: bold; background-color: #ffffff !important; border: 1px solid #ddd !important; color: #333333 !important; }}
+        div.stButton > button {{ border-radius: 20px; font-weight: bold; background-color: {card_bg} !important; border: 1px solid {border_color} !important; color: {text_color} !important; }}
         [data-testid="stMetricValue"] {{ color: {accent_color} !important; }}
         </style>
         """, unsafe_allow_html=True)
 
-    st.markdown("""
-        <div style="background-color: #ffffff; padding: 12px; border-radius: 10px; border: 2px dashed #FF85A2; text-align: center; margin-bottom: 15px; box-shadow: 0px 4px 6px rgba(0,0,0,0.05);">
+    st.markdown(f"""
+        <div style="background-color: {card_bg}; padding: 12px; border-radius: 10px; border: 2px dashed #FF85A2; text-align: center; margin-bottom: 15px; box-shadow: 0px 4px 6px rgba(0,0,0,0.05);">
             <span style="font-size: 1.1rem; font-weight: bold; color: #FF85A2;">🚨 스마트폰 접속 시 필독! 🚨</span><br>
-            <span style="color: #333333;">화면 맨 왼쪽 위 <b>[ > ]</b> 모양 버튼을 눌러야<br>우리의 D-Day와 데이트 일정을 볼 수 있어요! 👈</span>
+            <span style="color: {text_color};">화면 맨 왼쪽 위 <b>[ > ]</b> 모양 버튼을 눌러야<br>우리의 D-Day와 데이트 일정을 볼 수 있어요! 👈</span>
         </div>
         """, unsafe_allow_html=True)
 
@@ -360,9 +379,9 @@ if check_password():
             st.rerun()
 
     # ==========================================
-    # 📌 메인 탭 구성
+    # 📌 메인 탭 구성 (🎁 타임캡슐 추가!)
     # ==========================================
-    tabs = st.tabs(["💕 데이트", "💌 쪽지함", "📸 사진첩", "⏳ 타임라인", "😋 오늘 뭐 먹지?", "📍 장소/기록"])
+    tabs = st.tabs(["💕 데이트", "💌 쪽지함", "📸 사진첩", "⏳ 타임라인", "😋 오늘 뭐 먹지?", "📍 장소/기록", "🎁 타임캡슐"])
 
     with tabs[0]:
         st.subheader("🗓️ 우리의 데이트 일정")
@@ -560,9 +579,60 @@ if check_password():
             link_html = f"<br><a href='{r.get('link', '#')}' target='_blank'>🔗 지도에서 보기</a>" if r.get('link') else ""
             st.markdown(f"""
                 <div class="card">
-                    <span style="background-color:rgba(128,128,128,0.2); padding:2px 5px; border-radius:5px; font-size:0.8rem; color:#333333;">{r['cat']}</span>
+                    <span style="background-color:rgba(128,128,128,0.2); padding:2px 5px; border-radius:5px; font-size:0.8rem; color:{text_color};">{r['cat']}</span>
                     <b>{r['name']}</b> {r['rating']} ({r['date']})
                     {link_html} <br><br>
-                    <p style="margin: 0; color:#333333;">{r['comment']}</p>
+                    <p style="margin: 0; color:{text_color};">{r['comment']}</p>
                 </div>
                 """, unsafe_allow_html=True)
+
+    # --- 탭 7: 타임캡슐 (새 기능) ---
+    with tabs[6]:
+        st.subheader("🎁 미래로 보내는 타임캡슐")
+        st.write("지정된 날짜가 되기 전까지는 편지를 절대 열어볼 수 없습니다! 🤫")
+
+        with st.form("capsule_form", clear_on_submit=True):
+            c_title = st.text_input("타임캡슐 이름 (예: 우리의 1주년)")
+            # 최소 설정일을 '내일'로 고정하여 당일 개봉을 방지합니다.
+            c_date = st.date_input("열어볼 날짜", min_value=now_kst.date() + datetime.timedelta(days=1))
+            c_content = st.text_area("미래의 우리에게 남길 편지")
+            
+            if st.form_submit_button("타임캡슐 묻기 ⛏️") and c_title and c_content:
+                st.session_state.time_capsules.append({
+                    "title": c_title,
+                    "open_date": str(c_date),
+                    "content": c_content,
+                    "by": user_name_only,
+                    "created_date": today_str
+                })
+                st.session_state.time_capsules.sort(key=lambda x: x['open_date'])
+                save_data()
+                st.success(f"{c_date}에 개봉될 타임캡슐을 안전하게 묻었습니다! 🔒")
+                st.rerun()
+
+        st.divider()
+        st.subheader("묻혀있는 타임캡슐 목록 🗺️")
+        
+        if not st.session_state.time_capsules:
+            st.caption("아직 땅에 묻은 타임캡슐이 없어요!")
+            
+        for i, cap in enumerate(st.session_state.time_capsules):
+            # 오늘 날짜가 개봉일보다 크거나 같으면 자물쇠가 풀림!
+            is_open = today_str >= cap['open_date']
+            
+            if is_open:
+                with st.expander(f"🎉 [열림] {cap['title']} (개봉일: {cap['open_date']})"):
+                    st.write(f"**📝 작성자:** {cap['by']} (묻은 날: {cap.get('created_date', '과거')})")
+                    st.info(cap['content'])
+                    if st.button("빈 캡슐 버리기 🗑️", key=f"del_cap_{i}"):
+                        st.session_state.time_capsules.pop(i)
+                        save_data()
+                        st.rerun()
+            else:
+                # 남은 디데이 계산 로직
+                target_date = datetime.datetime.strptime(cap['open_date'], "%Y-%m-%d").date()
+                d_day = (target_date - now_kst.date()).days
+                
+                with st.expander(f"🔒 [잠김] {cap['title']} (D-{d_day}일)"):
+                    st.warning(f"이 캡슐은 **{cap['open_date']} 자정(KST)**에 열쇠가 풀립니다! 🗝️")
+                    st.write(f"**📝 작성자:** {cap['by']} (묻은 날: {cap.get('created_date', '과거')})")
