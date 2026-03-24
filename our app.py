@@ -77,7 +77,9 @@ def load_data():
     }
 
 def save_data():
-    # 1. 시트1에는 가벼운 단일 데이터만 저장
+    import time # 🛡️ 구글 서버 차단 방어용 심호흡 모듈 호출
+    
+    # 1. 시트1에는 가벼운 단일 데이터만 묶어둡니다.
     main_data = {
         "notice": st.session_state.notice,
         "promises": st.session_state.promises,
@@ -86,13 +88,23 @@ def save_data():
         "current_mood_date": st.session_state.current_mood_date,
         "menu_list": st.session_state.menu_list,
     }
-    sheet_main.update_acell('A1', json.dumps(main_data))
     
-    # 2. 무거워지는 리스트 데이터는 각각의 전용 방(A2 셀)에 분산 저장
+    # 2. 1.5초씩 심호흡을 하며 천천히 저장하여 구글 API 차단을 원천 봉쇄합니다!
+    sheet_main.update_acell('A1', json.dumps(main_data))
+    time.sleep(1.5) 
+    
     sheet_memo.update_acell('A2', json.dumps(st.session_state.memo_history))
+    time.sleep(1.5)
+    
     sheet_time.update_acell('A2', json.dumps(st.session_state.timeline))
+    time.sleep(1.5)
+    
     sheet_date.update_acell('A2', json.dumps(st.session_state.date_schedules))
+    time.sleep(1.5)
+    
     sheet_wish.update_acell('A2', json.dumps(st.session_state.wishlist))
+    time.sleep(1.5)
+    
     sheet_review.update_acell('A2', json.dumps(st.session_state.reviews))
 
 # --- 보안 설정 ---
