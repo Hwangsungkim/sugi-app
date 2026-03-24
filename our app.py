@@ -53,16 +53,16 @@ def load_data():
     except:
         main_data = {}
 
-    # 🛠️ [조각화 로직] 세로로 쪼개진 데이터를 다시 하나로 완벽하게 이어붙이는 함수
     def get_large_data(sheet_obj):
         try:
-            # A열 전체를 가져온 뒤, 1번 줄(이름표)을 제외하고 합칩니다.
-            vals = sheet_obj.col_values(1)[1:] 
+            vals = sheet_obj.col_values(1)[1:]
             if not vals:
                 return []
             joined_str = "".join(vals)
             return json.loads(joined_str)
-        except:
+        except Exception as e:
+            # 🚨 침묵의 에러 방지: 문제가 생기면 화면에 즉시 에러를 토해내도록 수정!
+            st.error(f"{sheet_obj.title} 데이터를 읽는 중 문제 발생: {e}")
             return []
 
     return {
@@ -90,20 +90,17 @@ def save_data():
     }
     sheet_main.update_acell('A1', json.dumps(main_data))
     
-    # 🛠️ [조각화 로직] 5만 자가 넘는 데이터를 4만 자씩 깍둑썰기하여 세로로 저장하는 함수
     def save_large_data(sheet_obj, data_list):
         if not data_list:
             return
         json_str = json.dumps(data_list)
-        # 40,000자 단위로 데이터 쪼개기
         chunks = [json_str[i:i+40000] for i in range(0, len(json_str), 40000)]
         cell_values = [[chunk] for chunk in chunks]
         
-        # A2부터 그 아래 공간을 싹 비우고, 쪼개진 데이터를 세로로 안전하게 넣습니다.
         sheet_obj.batch_clear(['A2:A'])
-        sheet_obj.update(values=cell_values, range_name='A2')
+        # 🛡️ 핵심 방어: 구글 시트가 맘대로 서식을 못 바꾸게 'RAW(날것)' 옵션 강제 주입!
+        sheet_obj.update(values=cell_values, range_name='A2', value_input_option='RAW')
 
-    # 구글 서버 차단 방지용 심호흡(Delay)은 그대로 유지합니다.
     import time
     save_large_data(sheet_memo, st.session_state.memo_history)
     time.sleep(1.2)
