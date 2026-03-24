@@ -106,7 +106,7 @@ def load_data():
         "wishlist": get_large_data(sheet_wish),
         "reviews": get_large_data(sheet_review),
         "qna_data": main_data.get("qna_data", {}),
-        "time_capsules": main_data.get("time_capsules", []) # 🎁 타임캡슐 데이터 공간 추가!
+        "time_capsules": main_data.get("time_capsules", [])
     }
 
 def save_data():
@@ -118,7 +118,7 @@ def save_data():
         "current_mood_date": st.session_state.current_mood_date,
         "menu_list": st.session_state.menu_list,
         "qna_data": st.session_state.qna_data,
-        "time_capsules": st.session_state.time_capsules # 🎁 타임캡슐 저장 로직
+        "time_capsules": st.session_state.time_capsules
     }
     sheet_main.update_acell('A1', json.dumps(main_data))
     
@@ -159,6 +159,14 @@ def check_password():
 
 # --- 메인 로직 시작 ---
 if check_password():
+    
+    # ✨ [UI F] 전면 토스트 팝업 중앙 제어 시스템
+    if "toast_msg" not in st.session_state:
+        st.session_state.toast_msg = ""
+    if st.session_state.toast_msg:
+        st.toast(st.session_state.toast_msg)
+        st.session_state.toast_msg = "" # 한 번 띄우고 즉시 소각
+
     if 'data_loaded' not in st.session_state:
         saved_data = load_data()
         for key, value in saved_data.items():
@@ -172,7 +180,7 @@ if check_password():
             save_data()
 
     # ==========================================
-    # 💌 [Task 2] 매일매일 30문 30답
+    # 💌 [Task 2] 매일매일 30문 30답 (기존 로직 완벽 보존)
     # ==========================================
     qna_list = [
         "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?",
@@ -230,7 +238,8 @@ if check_password():
             st.session_state.qna_data[q_key]["hodl"] = hodl_ans
             st.session_state.qna_data[q_key]["sugi"] = sugi_ans
             save_data()
-            st.success("두 사람의 소중한 답변이 영구 저장되었습니다! ✨")
+            st.session_state.toast_msg = "두 사람의 소중한 답변이 영구 저장되었습니다! ✨"
+            st.rerun()
 
     # ==========================================
     # 📌 🌙 낮/밤 커플 테마 자동 전환 로직 (UI G)
@@ -240,10 +249,9 @@ if check_password():
         user_name_only = "수기남자친구" if "남자친구" in user_type else "수기"
         
         current_hour = now_kst.hour
-        is_night = current_hour >= 19 or current_hour <= 6 # 저녁 7시 ~ 아침 6시 야간 모드
+        is_night = current_hour >= 19 or current_hour <= 6
         
         if is_night:
-            # 🌙 [야간 모드] 심야의 감성 테마
             bg_color = "#1A1A2E" 
             card_bg = "#16213E"
             text_color = "#E0E0E0"
@@ -252,7 +260,6 @@ if check_password():
             accent_color = "#E94560" if user_name_only == "수기" else "#4B89FF"
             user_icon = "👧" if user_name_only == "수기" else "👦"
         else:
-            # ☀️ [주간 모드] 화사한 파스텔 테마
             text_color = "#333333"
             card_bg = "#ffffff"
             input_bg = "#ffffff"
@@ -266,7 +273,6 @@ if check_password():
                 accent_color = "#4B89FF"
                 user_icon = "👦"
 
-    # 스마트 CSS 렌더링 (낮/밤 변수 동기화)
     st.markdown(f"""
         <div class="custom-bg-layer" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: {bg_color}; z-index: -99999; pointer-events: none;"></div>
         """, unsafe_allow_html=True)
@@ -332,7 +338,15 @@ if check_password():
         st.session_state.clear()
         st.rerun()
 
+    # 🛠️ [버그 픽스] 잃어버렸던 공지사항 수정 기능 완벽 복구
     st.success(f"📢 {st.session_state.notice}")
+    with st.expander("✏️ 공지사항 수정"):
+        new_notice = st.text_input("새로운 공지 내용을 적어주세요.", value=st.session_state.notice)
+        if st.button("공지 변경 확정 💾"):
+            st.session_state.notice = new_notice
+            save_data()
+            st.session_state.toast_msg = "공지사항이 성공적으로 변경되었습니다! 📢"
+            st.rerun()
 
     # ==========================================
     # 📌 사이드바 (메뉴 구성)
@@ -371,6 +385,7 @@ if check_password():
             if st.button("추가") and new_promise:
                 st.session_state.promises.append({"text": new_promise, "by": user_name_only})
                 save_data()
+                st.session_state.toast_msg = "새로운 약속이 추가되었습니다! 🤝"
                 st.rerun()
             
         st.divider()
@@ -379,9 +394,9 @@ if check_password():
             st.rerun()
 
     # ==========================================
-    # 📌 메인 탭 구성 (🎁 타임캡슐 추가!)
+    # 📌 메인 탭 구성 (🎡 만능 룰렛 탭 명칭 변경)
     # ==========================================
-    tabs = st.tabs(["💕 데이트", "💌 쪽지함", "📸 사진첩", "⏳ 타임라인", "😋 오늘 뭐 먹지?", "📍 장소/기록", "🎁 타임캡슐"])
+    tabs = st.tabs(["💕 데이트", "💌 쪽지함", "📸 사진첩", "⏳ 타임라인", "🎡 만능 룰렛", "📍 장소/기록", "🎁 타임캡슐"])
 
     with tabs[0]:
         st.subheader("🗓️ 우리의 데이트 일정")
@@ -392,6 +407,7 @@ if check_password():
                 st.session_state.date_schedules.append({"date": str(s_date), "plan": s_plan, "by": user_name_only})
                 st.session_state.date_schedules.sort(key=lambda x: x['date'])
                 save_data()
+                st.session_state.toast_msg = "데이트 일정이 추가되었습니다! 🗓️"
                 st.rerun()
                 
         for i, s in enumerate(st.session_state.date_schedules):
@@ -401,10 +417,12 @@ if check_password():
                 if col_s1.button("수정 완료", key=f"btn_s_edit_{i}"):
                     st.session_state.date_schedules[i]['plan'] = edit_s
                     save_data()
+                    st.session_state.toast_msg = "일정이 수정되었습니다! ✨"
                     st.rerun()
                 if col_s2.button("삭제하기 🗑️", key=f"btn_s_del_{i}"):
                     st.session_state.date_schedules.pop(i)
                     save_data()
+                    st.session_state.toast_msg = "일정이 삭제되었습니다. 🗑️"
                     st.rerun()
                 
         st.divider()
@@ -430,7 +448,7 @@ if check_password():
                 st.session_state.mood_history.append(new_record)
             
             save_data()
-            st.toast(f"{user_name_only}님의 기분이 업데이트 되었습니다! 💖")
+            st.session_state.toast_msg = f"{user_name_only}님의 기분이 업데이트 되었습니다! 💖"
             st.rerun()
 
         st.write(f"👦 수기남자친구: {st.session_state.moods['수기남자친구']} ({mood_desc[st.session_state.moods['수기남자친구']]})")
@@ -453,6 +471,7 @@ if check_password():
                         st.session_state.memo_history[my_today_memo_idx]['content'] = edit_content
                         st.session_state.memo_history[my_today_memo_idx]['edited'] = True
                         save_data()
+                        st.session_state.toast_msg = "쪽지가 수정되었습니다! 💌"
                         st.rerun()
             else:
                 with st.form("new_memo_form"):
@@ -460,6 +479,7 @@ if check_password():
                     if st.form_submit_button("남기기") and content:
                         st.session_state.memo_history.insert(0, {"date": today_str, "time": current_time_str, "user": user_name_only, "content": content, "edited": False})
                         save_data()
+                        st.session_state.toast_msg = "오늘의 쪽지를 남겼습니다! 💌"
                         st.rerun()
 
         st.divider()
@@ -473,6 +493,7 @@ if check_password():
         img_file = st.file_uploader("사진 올리기", type=["jpg", "png"])
         if img_file and st.button("업로드"):
             st.session_state.photos.insert(0, {"img": img_file.getvalue(), "date": today_str, "user": user_name_only})
+            st.session_state.toast_msg = "사진이 업로드 되었습니다! 📸"
             st.rerun()
         for p in st.session_state.photos:
             st.image(p['img'], caption=f"{p['date']} by {p['user']}", use_container_width=True)
@@ -486,34 +507,59 @@ if check_password():
                 st.session_state.timeline.append({"date": str(t_date), "event": t_event, "by": user_name_only})
                 st.session_state.timeline.sort(key=lambda x: x['date'], reverse=True)
                 save_data()
+                st.session_state.toast_msg = "타임라인이 기록되었습니다! ⏳"
                 st.rerun()
         for item in st.session_state.timeline:
             st.markdown(f'<div class="card"><b>{item["date"]}</b> ({item.get("by", "")})<br>{item["event"]}</div>', unsafe_allow_html=True)
 
+    # 🛠️ [기능 C] 만능 룰렛 전격 도입!
     with tabs[4]:
-        st.subheader("🎰 메뉴 돌림판")
-        if st.button("메뉴 랜덤 뽑기! 🎲"):
-            st.warning(f"오늘의 추천: **{random.choice(st.session_state.menu_list)}** 😋")
-            
-        with st.form("menu_form", clear_on_submit=True):
-            new_menu = st.text_input("새로운 메뉴 리스트 추가")
-            if st.form_submit_button("메뉴 추가") and new_menu:
-                st.session_state.menu_list.append(new_menu)
-                save_data()
-                st.rerun()
+        st.subheader("🎡 결정장애 해결! 만능 룰렛")
+        
+        # 1. 만능 커플 룰렛 (직접 입력)
+        st.markdown("#### 🎯 무엇이든 랜덤 뽑기!")
+        st.caption("선택지를 쉼표(,)로 구분해서 적어주세요! (예: 내가 쏘기, 너가 쏘기, 반반)")
+        custom_options = st.text_input("선택지 입력", placeholder="치킨, 피자, 족발")
+        
+        if st.button("결정의 룰렛 돌리기! 🎲"):
+            if custom_options.strip():
+                opts = [o.strip() for o in custom_options.split(",") if o.strip()]
+                if opts:
+                    chosen = random.choice(opts)
+                    st.success(f"🎉 당첨: **{chosen}** ‼️")
+                    st.balloons() # 축하 풍선 애니메이션 효과
+                else:
+                    st.warning("선택지를 제대로 입력해주세요!")
+            else:
+                st.warning("선택지를 먼저 입력해주세요!")
                 
-        st.write("👇 **메뉴를 터치하면 수정/삭제할 수 있어요!**")
-        for i, menu in enumerate(st.session_state.menu_list):
-            with st.expander(f"🍽️ {menu}"):
-                edit_m = st.text_input(f"메뉴 이름 수정", value=menu, key=f"edit_m_{i}")
-                col_m1, col_m2 = st.columns(2)
-                if col_m1.button("수정 완료", key=f"btn_m_edit_{i}"):
-                    st.session_state.menu_list[i] = edit_m
+        st.divider()
+        
+        # 2. 기존 메뉴 리스트 연동 돌림판
+        st.markdown("#### 😋 저장해둔 메뉴 리스트에서 뽑기")
+        if st.button("메뉴 랜덤 뽑기! 🥩"):
+            if st.session_state.menu_list:
+                chosen_menu = random.choice(st.session_state.menu_list)
+                st.warning(f"오늘의 추천 메뉴는 바로: **{chosen_menu}** 😋")
+            else:
+                st.error("저장된 메뉴가 없습니다. 아래에서 추가해주세요!")
+            
+        with st.expander("🍽️ 우리만의 메뉴 리스트 관리"):
+            with st.form("menu_form", clear_on_submit=True):
+                new_menu = st.text_input("새로운 메뉴 추가")
+                if st.form_submit_button("메뉴 추가") and new_menu:
+                    st.session_state.menu_list.append(new_menu)
                     save_data()
+                    st.session_state.toast_msg = "새 메뉴가 리스트에 추가되었습니다! 🍽️"
                     st.rerun()
-                if col_m2.button("삭제하기 🗑️", key=f"btn_m_del_{i}"):
+                    
+            for i, menu in enumerate(st.session_state.menu_list):
+                col_m1, col_m2 = st.columns([0.7, 0.3])
+                col_m1.write(f"- {menu}")
+                if col_m2.button("삭제", key=f"btn_m_del_{i}"):
                     st.session_state.menu_list.pop(i)
                     save_data()
+                    st.session_state.toast_msg = "메뉴가 삭제되었습니다."
                     st.rerun()
 
     with tabs[5]:
@@ -523,6 +569,7 @@ if check_password():
             if st.form_submit_button("추가") and w_place:
                 st.session_state.wishlist.append({"place": w_place, "visited": False, "by": user_name_only})
                 save_data()
+                st.session_state.toast_msg = "위시리스트에 장소가 추가되었습니다! 📍"
                 st.rerun()
                 
         st.write("👇 **장소를 터치하여 방문 체크 및 관리하세요!**")
@@ -540,6 +587,7 @@ if check_password():
                 if new_visited != is_visited:
                     st.session_state.wishlist[i]['visited'] = new_visited
                     save_data()
+                    st.session_state.toast_msg = "방문 상태가 저장되었습니다! 👣"
                     st.rerun()
                 
                 if not new_visited:
@@ -548,15 +596,18 @@ if check_password():
                     if col_w1.button("수정 완료", key=f"btn_w_edit_{i}"):
                         st.session_state.wishlist[i]['place'] = edit_w
                         save_data()
+                        st.session_state.toast_msg = "장소명이 수정되었습니다! ✨"
                         st.rerun()
                     if col_w2.button("삭제하기 🗑️", key=f"btn_w_del_{i}"):
                         st.session_state.wishlist.pop(i)
                         save_data()
+                        st.session_state.toast_msg = "장소가 목록에서 삭제되었습니다."
                         st.rerun()
                 else:
                     if st.button("목록에서 완전히 삭제하기 🗑️", key=f"btn_w_del_v_{i}"):
                         st.session_state.wishlist.pop(i)
                         save_data()
+                        st.session_state.toast_msg = "장소가 완전히 삭제되었습니다."
                         st.rerun()
         
         st.divider()
@@ -573,6 +624,7 @@ if check_password():
                     "comment": r_comment, "photo_url": "", "date": today_str, "by": user_name_only
                 })
                 save_data()
+                st.session_state.toast_msg = "정성스러운 데이트 후기가 등록되었습니다! 📝"
                 st.rerun()
         
         for r in st.session_state.reviews:
@@ -586,14 +638,12 @@ if check_password():
                 </div>
                 """, unsafe_allow_html=True)
 
-    # --- 탭 7: 타임캡슐 (새 기능) ---
     with tabs[6]:
         st.subheader("🎁 미래로 보내는 타임캡슐")
         st.write("지정된 날짜가 되기 전까지는 편지를 절대 열어볼 수 없습니다! 🤫")
 
         with st.form("capsule_form", clear_on_submit=True):
             c_title = st.text_input("타임캡슐 이름 (예: 우리의 1주년)")
-            # 최소 설정일을 '내일'로 고정하여 당일 개봉을 방지합니다.
             c_date = st.date_input("열어볼 날짜", min_value=now_kst.date() + datetime.timedelta(days=1))
             c_content = st.text_area("미래의 우리에게 남길 편지")
             
@@ -607,7 +657,7 @@ if check_password():
                 })
                 st.session_state.time_capsules.sort(key=lambda x: x['open_date'])
                 save_data()
-                st.success(f"{c_date}에 개봉될 타임캡슐을 안전하게 묻었습니다! 🔒")
+                st.session_state.toast_msg = f"{c_date}에 개봉될 타임캡슐을 안전하게 묻었습니다! 🔒"
                 st.rerun()
 
         st.divider()
@@ -617,7 +667,6 @@ if check_password():
             st.caption("아직 땅에 묻은 타임캡슐이 없어요!")
             
         for i, cap in enumerate(st.session_state.time_capsules):
-            # 오늘 날짜가 개봉일보다 크거나 같으면 자물쇠가 풀림!
             is_open = today_str >= cap['open_date']
             
             if is_open:
@@ -627,9 +676,9 @@ if check_password():
                     if st.button("빈 캡슐 버리기 🗑️", key=f"del_cap_{i}"):
                         st.session_state.time_capsules.pop(i)
                         save_data()
+                        st.session_state.toast_msg = "개봉된 타임캡슐을 삭제했습니다. 🗑️"
                         st.rerun()
             else:
-                # 남은 디데이 계산 로직
                 target_date = datetime.datetime.strptime(cap['open_date'], "%Y-%m-%d").date()
                 d_day = (target_date - now_kst.date()).days
                 
