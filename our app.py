@@ -17,7 +17,7 @@ current_time_str = now_kst.strftime("%H:%M")
 
 # --- 🚀 구글 시트 연동 설정 ---
 @st.cache_resource
-def get_spreadsheet():
+def get_google_sheets():
     scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
     if "google_auth" in st.secrets:
         token_info = json.loads(st.secrets["google_auth"]["token"])
@@ -25,15 +25,26 @@ def get_spreadsheet():
     else:
         creds = Credentials.from_authorized_user_file('token.json', scopes)
     client = gspread.authorize(creds)
-    return client.open('couple_app_data')
+    doc = client.open('couple_app_data')
+    
+    # 6개의 방을 찾는 작업 자체를 캐시에 가둬버립니다 (구글 API 차단 영구 방지!)
+    return {
+        "main": doc.worksheet('시트1'),
+        "memo": doc.worksheet('쪽지함'),
+        "time": doc.worksheet('타임라인'),
+        "date": doc.worksheet('데이트일정'),
+        "wish": doc.worksheet('위시리스트'),
+        "review": doc.worksheet('데이트후기')
+    }
 
-doc = get_spreadsheet()
-sheet_main = doc.worksheet('시트1')
-sheet_memo = doc.worksheet('쪽지함')
-sheet_time = doc.worksheet('타임라인')
-sheet_date = doc.worksheet('데이트일정')
-sheet_wish = doc.worksheet('위시리스트')
-sheet_review = doc.worksheet('데이트후기')
+# 캐시된 방 목록을 불러와서 변수에 예쁘게 담아줍니다
+sheets = get_google_sheets()
+sheet_main = sheets["main"]
+sheet_memo = sheets["memo"]
+sheet_time = sheets["time"]
+sheet_date = sheets["date"]
+sheet_wish = sheets["wish"]
+sheet_review = sheets["review"]
 
 def load_data():
     try:
