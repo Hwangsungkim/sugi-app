@@ -53,11 +53,15 @@ def load_data():
     except:
         main_data = {}
 
-    def get_json(sheet_obj):
+    # 🛠️ [조각화 로직] 세로로 쪼개진 데이터를 다시 하나로 완벽하게 이어붙이는 함수
+    def get_large_data(sheet_obj):
         try:
-            # HODL님이 만든 1번 줄 이름표를 피해 A2 셀에 저장/로드!
-            val = sheet_obj.acell('A2').value 
-            return json.loads(val) if val else []
+            # A열 전체를 가져온 뒤, 1번 줄(이름표)을 제외하고 합칩니다.
+            vals = sheet_obj.col_values(1)[1:] 
+            if not vals:
+                return []
+            joined_str = "".join(vals)
+            return json.loads(joined_str)
         except:
             return []
 
@@ -68,18 +72,14 @@ def load_data():
         "mood_history": main_data.get("mood_history", []),
         "current_mood_date": main_data.get("current_mood_date", today_str),
         "menu_list": main_data.get("menu_list", ["삼겹살", "초밥"]),
-        # 이제 각각의 전용 방에서 데이터를 불러옵니다.
-        "memo_history": get_json(sheet_memo),
-        "timeline": get_json(sheet_time),
-        "date_schedules": get_json(sheet_date),
-        "wishlist": get_json(sheet_wish),
-        "reviews": get_json(sheet_review)
+        "memo_history": get_large_data(sheet_memo),
+        "timeline": get_large_data(sheet_time),
+        "date_schedules": get_large_data(sheet_date),
+        "wishlist": get_large_data(sheet_wish),
+        "reviews": get_large_data(sheet_review)
     }
 
 def save_data():
-    import time # 🛡️ 구글 서버 차단 방어용 심호흡 모듈 호출
-    
-    # 1. 시트1에는 가벼운 단일 데이터만 묶어둡니다.
     main_data = {
         "notice": st.session_state.notice,
         "promises": st.session_state.promises,
@@ -88,24 +88,32 @@ def save_data():
         "current_mood_date": st.session_state.current_mood_date,
         "menu_list": st.session_state.menu_list,
     }
-    
-    # 2. 1.5초씩 심호흡을 하며 천천히 저장하여 구글 API 차단을 원천 봉쇄합니다!
     sheet_main.update_acell('A1', json.dumps(main_data))
-    time.sleep(1.5) 
     
-    sheet_memo.update_acell('A2', json.dumps(st.session_state.memo_history))
-    time.sleep(1.5)
-    
-    sheet_time.update_acell('A2', json.dumps(st.session_state.timeline))
-    time.sleep(1.5)
-    
-    sheet_date.update_acell('A2', json.dumps(st.session_state.date_schedules))
-    time.sleep(1.5)
-    
-    sheet_wish.update_acell('A2', json.dumps(st.session_state.wishlist))
-    time.sleep(1.5)
-    
-    sheet_review.update_acell('A2', json.dumps(st.session_state.reviews))
+    # 🛠️ [조각화 로직] 5만 자가 넘는 데이터를 4만 자씩 깍둑썰기하여 세로로 저장하는 함수
+    def save_large_data(sheet_obj, data_list):
+        if not data_list:
+            return
+        json_str = json.dumps(data_list)
+        # 40,000자 단위로 데이터 쪼개기
+        chunks = [json_str[i:i+40000] for i in range(0, len(json_str), 40000)]
+        cell_values = [[chunk] for chunk in chunks]
+        
+        # A2부터 그 아래 공간을 싹 비우고, 쪼개진 데이터를 세로로 안전하게 넣습니다.
+        sheet_obj.batch_clear(['A2:A'])
+        sheet_obj.update(values=cell_values, range_name='A2')
+
+    # 구글 서버 차단 방지용 심호흡(Delay)은 그대로 유지합니다.
+    import time
+    save_large_data(sheet_memo, st.session_state.memo_history)
+    time.sleep(1.2)
+    save_large_data(sheet_time, st.session_state.timeline)
+    time.sleep(1.2)
+    save_large_data(sheet_date, st.session_state.date_schedules)
+    time.sleep(1.2)
+    save_large_data(sheet_wish, st.session_state.wishlist)
+    time.sleep(1.2)
+    save_large_data(sheet_review, st.session_state.reviews)
 
 # --- 보안 설정 ---
 def check_password():
