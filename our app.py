@@ -167,7 +167,7 @@ def save_specific_large_data(sheet_obj, data_list):
     sheet_obj.update(values=cell_values, range_name='A2', value_input_option='RAW')
 
 # ==========================================
-# 📸 2TB 구글 드라이브 사진 연동 모듈
+# 📸 2TB 구글 드라이브 사진 연동 및 관리 모듈 (v4.4 업데이트)
 # ==========================================
 def upload_photo_to_drive(file_bytes, filename, mime_type):
     try:
@@ -186,17 +186,27 @@ def upload_photo_to_drive(file_bytes, filename, mime_type):
             st.error(f"🚨 [업로드 실패]: {str(e)}")
         return None
 
-def load_photos_from_drive():
+# 🚨 [v4.4] 더 보기(페이징)를 위해 limit 파라미터 추가
+def load_photos_from_drive(limit=20):
     if not DRIVE_FOLDER_ID: return []
     try:
         results = drive_service.files().list(
             q=f"'{DRIVE_FOLDER_ID}' in parents and trashed=false",
-            pageSize=100, fields="files(id, name)", orderBy="createdTime desc"
+            pageSize=limit, fields="files(id, name)", orderBy="createdTime desc"
         ).execute()
         return results.get('files', [])
     except Exception as e:
         st.error(f"구글 드라이브 접근 에러: {e}")
         return []
+
+# 🚨 [v4.4] 추억 지우개 (삭제 API)
+def delete_photo_from_drive(file_id):
+    try:
+        drive_service.files().delete(fileId=file_id).execute()
+        return True
+    except Exception as e:
+        st.error(f"사진 삭제 실패: {e}")
+        return False
 
 @st.cache_data(show_spinner=False, ttl=3600)
 def get_image_bytes(file_id):
@@ -241,6 +251,10 @@ if check_password():
             st.session_state.moods = {"수기남자친구": "🙂", "수기": "🙂"}
             st.session_state.current_mood_date = today_str
             save_main_data()
+
+    # 🚨 [v4.4] 사진 페이징 메모리 장착 (기본 20장 시작)
+    if "photo_limit" not in st.session_state:
+        st.session_state.photo_limit = 20
 
     qna_list = [
         "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?",
@@ -506,14 +520,13 @@ if check_password():
             align_cls = "user-boy" if is_boy else "user-girl"
             st.markdown(f'<div class="card {align_cls}"><small><b>{m["user"]}</b> | {m["date"]}</small><p style="margin: 5px 0;">{m["content"]}</p><span class="time-text">{m["time"]}</span></div>', unsafe_allow_html=True)
 
-    # 🚀 [v4.3 타임머신 업데이트] 날짜 지정 기능 추가
+    # 🚀 [v4.4] 추억 지우개 & 페이징(더 보기) 시스템 탑재
     with tabs[2]:
         st.subheader("📸 우리들의 추억 저장소")
         
         with st.expander("✨ 새로운 추억 보관하기", expanded=False):
             img_files = st.file_uploader("사진을 여러 장 선택해서 올릴 수 있어요!", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
             
-            # 🚨 UI 깔끔하게 2단 분리 (달력 & 텍스트)
             col_e1, col_e2 = st.columns([0.4, 0.6])
             with col_e1:
                 event_date_input = st.date_input("언제 있었던 일인가요? 🗓️", value=now_kst.date())
@@ -527,17 +540,14 @@ if check_password():
                         if not clean_event_name: 
                             clean_event_name = "우리의 일상"
                             
-                        # 🚨 선택한 날짜를 폴더 정렬의 기준으로 굳히기!
                         selected_date_str = str(event_date_input)
-                            
                         success_count = 0
+                        
                         for img_file in img_files:
                             ext = os.path.splitext(img_file.name)[1]
                             if not ext: ext = ".jpg"
                             
-                            # 파일명에 오늘이 아닌 '선택한 과거 날짜'를 새겨 넣습니다.
                             filename = f"{selected_date_str}_{user_name_only}_{clean_event_name}_{random.randint(1000, 9999)}{ext}"
-                            
                             file_id = upload_photo_to_drive(img_file.getvalue(), filename, img_file.type)
                             if file_id: success_count += 1
                             
@@ -549,7 +559,8 @@ if check_password():
                 
         st.divider()
         
-        photos = load_photos_from_drive()
+        # 🚨 [v4.4] 제한된 수(photo_limit)만큼만 사진을 가져와서 속도 방어!
+        photos = load_photos_from_drive(limit=st.session_state.photo_limit)
         
         if not photos:
             st.caption("아직 보관된 추억이 없습니다. 첫 번째 추억을 올려보세요! 📸")
@@ -568,7 +579,6 @@ if check_password():
                     event_str = "기록 없는 추억"
                     
                 group_key = f"🗓️ {date_str} | 📂 {event_str}"
-                
                 if group_key not in grouped_photos:
                     grouped_photos[group_key] = []
                 grouped_photos[group_key].append(p)
@@ -582,9 +592,27 @@ if check_password():
                             img_bytes = get_image_bytes(p['id'])
                             parts = p['name'].split('_')
                             writer = parts[1] if len(parts) >= 2 else "알수없음"
+                            
+                            # 사진 출력
                             col.image(img_bytes, caption=f"by {writer}", use_container_width=True)
+                            
+                            # 🚨 [v4.4] 추억 지우개 버튼 배치 (사진 바로 아래)
+                            if col.button("🗑️ 지우기", key=f"del_img_{p['id']}"):
+                                if delete_photo_from_drive(p['id']):
+                                    st.session_state.toast_msg = "선택한 추억이 삭제되었습니다. 🗑️"
+                                    st.rerun()
+                                    
                         except Exception:
                             col.error("사진을 불러오지 못했습니다.")
+
+        st.divider()
+        
+        # 🚨 [v4.4] 더 보기(페이징) 버튼 로직
+        # 불러온 사진 갯수가 현재 한도(Limit)와 같거나 크다면, 아직 구글 드라이브에 과거 사진이 더 남아있을 확률이 높음.
+        if len(photos) >= st.session_state.photo_limit:
+            if st.button("⬇️ 과거 추억 더 불러오기 (20장)"):
+                st.session_state.photo_limit += 20
+                st.rerun()
 
     with tabs[3]:
         st.subheader("⏳ 타임라인")
