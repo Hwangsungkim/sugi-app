@@ -16,7 +16,7 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="수기 커플 노트", page_icon="❤️", layout="centered")
 
 # ==========================================
-# 🍎 [Task 1-B] 아이폰(iOS) 전용 홈 화면 아이콘 강제 주입
+# 🍎 아이폰(iOS) 전용 홈 화면 아이콘 강제 주입
 # ==========================================
 components.html("""
     <script>
@@ -28,7 +28,7 @@ components.html("""
 """, height=0, width=0)
 
 # ==========================================
-# 📱 [Task 1] PWA 앱 설치 유도 배너
+# 📱 PWA 앱 설치 유도 배너
 # ==========================================
 st.markdown("""
     <style>
@@ -88,7 +88,7 @@ sheet_qna = services["qna"]
 sheet_capsule = services["capsule"]
 drive_service = services["drive"]
 
-# 🚨 [v4.1.1 픽스] 스트림릿 TOML 금고의 방 구조를 스마트하게 탐색하는 로직
+# 스트림릿 TOML 금고의 방 구조 스마트 탐색
 if "DRIVE_FOLDER_ID" in st.secrets:
     DRIVE_FOLDER_ID = st.secrets["DRIVE_FOLDER_ID"]
 elif "google_auth" in st.secrets and "DRIVE_FOLDER_ID" in st.secrets["google_auth"]:
@@ -97,7 +97,7 @@ else:
     DRIVE_FOLDER_ID = ""
 
 # ==========================================
-# ⚡️ [v4.0 초고속 엔진] 데이터 로드 및 아토믹 세이브
+# ⚡️ 데이터 로드 및 아토믹 세이브
 # ==========================================
 def load_data():
     try:
@@ -168,7 +168,7 @@ def save_specific_large_data(sheet_obj, data_list):
     sheet_obj.update(values=cell_values, range_name='A2', value_input_option='RAW')
 
 # ==========================================
-# 📸 [v4.1] 2TB 구글 드라이브 사진 연동 모듈
+# 📸 2TB 구글 드라이브 사진 연동 모듈
 # ==========================================
 def upload_photo_to_drive(file_bytes, filename, mime_type):
     try:
@@ -190,9 +190,10 @@ def upload_photo_to_drive(file_bytes, filename, mime_type):
 def load_photos_from_drive():
     if not DRIVE_FOLDER_ID: return []
     try:
+        # 🚨 [v4.2] 더 많은 추억을 불러오기 위해 100장으로 한도 상향!
         results = drive_service.files().list(
             q=f"'{DRIVE_FOLDER_ID}' in parents and trashed=false",
-            pageSize=30, fields="files(id, name)", orderBy="createdTime desc"
+            pageSize=100, fields="files(id, name)", orderBy="createdTime desc"
         ).execute()
         return results.get('files', [])
     except Exception as e:
@@ -226,7 +227,6 @@ def check_password():
 # --- 메인 로직 시작 ---
 if check_password():
     
-    # ✨ [UI F] 전면 토스트 팝업 중앙 제어 시스템
     if "toast_msg" not in st.session_state:
         st.session_state.toast_msg = ""
     if st.session_state.toast_msg:
@@ -244,9 +244,6 @@ if check_password():
             st.session_state.current_mood_date = today_str
             save_main_data()
 
-    # ==========================================
-    # 💌 [Task 2] 매일매일 30문 30답
-    # ==========================================
     qna_list = [
         "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?",
         "3. 내가 가장 사랑스러워 보일 때는 언제야?", "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?",
@@ -277,7 +274,6 @@ if check_password():
 
     with st.expander(f"💌 오늘의 문답 (D-{30 - q_index}일 남음)", expanded=True):
         st.subheader(today_question)
-        
         col1, col2 = st.columns(2)
         with col1:
             hodl_ans = st.text_area("👦 HODL님의 답변", value=st.session_state.qna_data[q_key]["hodl"], height=100)
@@ -291,9 +287,7 @@ if check_password():
             st.session_state.toast_msg = "두 사람의 소중한 답변이 영구 저장되었습니다! ✨"
             st.rerun()
 
-    # ==========================================
-    # 📌 🌙 낮/밤 커플 테마 자동 전환 로직 (UI G)
-    # ==========================================
+    # 📌 🌙 낮/밤 커플 테마 자동 전환 로직
     with st.sidebar:
         user_type = st.radio("👤 접속자", ["수기남자친구 👦", "수기 👧"])
         user_name_only = "수기남자친구" if "남자친구" in user_type else "수기"
@@ -387,9 +381,6 @@ if check_password():
             st.session_state.toast_msg = "공지사항이 성공적으로 변경되었습니다! 📢"
             st.rerun()
 
-    # ==========================================
-    # 📌 사이드바 (메뉴 구성)
-    # ==========================================
     with st.sidebar:
         st.markdown(f"""
             <div style="background-color: rgba(128,128,128,0.05); padding: 10px; border-radius: 10px; border-left: 5px solid {accent_color}; margin-bottom: 15px;">
@@ -428,10 +419,8 @@ if check_password():
             st.session_state.clear()
             st.rerun()
 
-    # ==========================================
-    # 📌 메인 탭 구성
-    # ==========================================
-    tabs = st.tabs(["💕 데이트", "💌 쪽지함", "📸 사진첩", "⏳ 타임라인", "🎡 만능 룰렛", "📍 장소/기록", "🎁 타임캡슐"])
+    # 🚨 [명칭 변경] 사진첩 -> 추억 저장소
+    tabs = st.tabs(["💕 데이트", "💌 쪽지함", "📸 추억 저장소", "⏳ 타임라인", "🎡 만능 룰렛", "📍 장소/기록", "🎁 타임캡슐"])
 
     with tabs[0]:
         st.subheader("🗓️ 우리의 데이트 일정")
@@ -462,8 +451,6 @@ if check_password():
                 
         st.divider()
         st.subheader("🎭 오늘 우리의 기분")
-        st.caption("매일 자정(한국시간)에 초기화됩니다.")
-        
         mood_options = ["😢", "☁️", "🙂", "🥰", "🔥"]
         mood_desc = {"😢": "피곤함/우울", "☁️": "그저그럼", "🙂": "보통/평온", "🥰": "기분좋음", "🔥": "최고/열정!"}
         
@@ -522,38 +509,88 @@ if check_password():
             align_cls = "user-boy" if is_boy else "user-girl"
             st.markdown(f'<div class="card {align_cls}"><small><b>{m["user"]}</b> | {m["date"]}</small><p style="margin: 5px 0;">{m["content"]}</p><span class="time-text">{m["time"]}</span></div>', unsafe_allow_html=True)
 
-    # 🚀 [v4.1 핵심 수정] 영구 보존 2TB 구글 드라이브 사진첩 적용!
+    # 🚀 [v4.2 핵심 업데이트] 대대적인 UX 개편을 거친 추억 저장소
     with tabs[2]:
-        st.subheader("📸 2TB 영구 보존 사진첩")
-        img_file = st.file_uploader("사진 올리기 (자동으로 구글 드라이브에 저장됩니다)", type=["jpg", "png", "jpeg"])
+        st.subheader("📸 우리들의 추억 저장소")
         
-        if img_file and st.button("☁️ 2TB 드라이브에 안전하게 업로드"):
-            with st.spinner("구글 드라이브 궁전으로 사진을 전송하고 있습니다... ⏳"):
-                ext = os.path.splitext(img_file.name)[1]
-                if not ext: ext = ".jpg"
-                filename = f"{today_str}_{user_name_only}_{random.randint(1000, 9999)}{ext}"
-                
-                file_id = upload_photo_to_drive(img_file.getvalue(), filename, img_file.type)
-                
-                if file_id:
-                    st.session_state.toast_msg = "사진이 드라이브에 영구 저장되었습니다! 🚀"
-                    st.rerun()
+        # 1. 사진 업로드 영역을 아코디언(expander) 안에 숨겨서 깔끔하게 유지
+        with st.expander("✨ 새로운 추억 보관하기", expanded=False):
+            # 🚨 [다중 업로드 허용] accept_multiple_files=True 로 수십장 한방에 업로드!
+            img_files = st.file_uploader("사진을 여러 장 선택해서 올릴 수 있어요!", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+            
+            # 폴더 분류를 위한 추억 이름 받기 (에러 방지를 위한 필터링)
+            event_name_input = st.text_input("어떤 추억인가요? ✏️ (예: 부산 해운대 여행)", placeholder="추억 이름을 적어주시면 예쁜 폴더가 만들어져요!")
+            
+            if st.button("☁️ 2TB 드라이브에 안전하게 업로드"):
+                if img_files:
+                    with st.spinner("구글 드라이브 궁전으로 추억들을 전송하고 있습니다... ⏳"):
+                        # [TDD 방어] 특수문자 제거 및 빈칸일 경우 기본값 지정
+                        clean_event_name = event_name_input.strip().replace("_", " ").replace("/", " ")
+                        if not clean_event_name: 
+                            clean_event_name = "우리의 일상"
+                            
+                        success_count = 0
+                        for img_file in img_files:
+                            ext = os.path.splitext(img_file.name)[1]
+                            if not ext: ext = ".jpg"
+                            
+                            # 파일명에 '추억이름'을 꼬리표로 콕 박아넣습니다.
+                            filename = f"{today_str}_{user_name_only}_{clean_event_name}_{random.randint(1000, 9999)}{ext}"
+                            
+                            file_id = upload_photo_to_drive(img_file.getvalue(), filename, img_file.type)
+                            if file_id: success_count += 1
+                            
+                        if success_count > 0:
+                            st.session_state.toast_msg = f"{success_count}장의 추억이 드라이브에 영구 저장되었습니다! 🚀"
+                            st.rerun()
+                else:
+                    st.warning("먼저 업로드할 사진을 선택해주세요!")
                 
         st.divider()
         
-        # 드라이브에서 사진 목록 불러와서 화면에 그리기
+        # 2. 드라이브에서 사진을 가져와서 '폴더 형태'로 예쁘게 분류하기
         photos = load_photos_from_drive()
+        
         if not photos:
-            st.caption("아직 구글 드라이브에 업로드된 사진이 없습니다.")
+            st.caption("아직 보관된 추억이 없습니다. 첫 번째 추억을 올려보세요! 📸")
         else:
+            # 💡 사진들을 파일명에 적힌 '날짜'와 '추억이름' 기준으로 그룹화
+            grouped_photos = {}
             for p in photos:
-                try:
-                    img_bytes = get_image_bytes(p['id'])
-                    title_info = p['name'].split('_')
-                    caption_text = f"{title_info[0]} by {title_info[1]}" if len(title_info) >= 2 else p['name']
-                    st.image(img_bytes, caption=caption_text, use_container_width=True)
-                except Exception as e:
-                    st.error("보안 상의 이유로 이 사진을 화면에 그리지 못했습니다.")
+                parts = p['name'].split('_')
+                # v4.2 이후 방식: YYYY-MM-DD_작성자_추억이름_난수.ext
+                if len(parts) >= 4:
+                    date_str = parts[0]
+                    event_str = parts[2]
+                # v4.1 이전 방식: YYYY-MM-DD_작성자_난수.ext (추억이름 없음)
+                elif len(parts) == 3:
+                    date_str = parts[0]
+                    event_str = "기록 없는 추억"
+                else:
+                    date_str = "과거의 어느 날"
+                    event_str = "기록 없는 추억"
+                    
+                group_key = f"🗓️ {date_str} | 📂 {event_str}"
+                
+                if group_key not in grouped_photos:
+                    grouped_photos[group_key] = []
+                grouped_photos[group_key].append(p)
+
+            # 💡 그룹화된 추억들을 폴더(expander) 형태로 렌더링
+            for group_key, photo_list in grouped_photos.items():
+                with st.expander(f"{group_key} (총 {len(photo_list)}장)"):
+                    # 갤러리 느낌을 내기 위해 2개의 열(Grid)로 나누어 배치
+                    cols = st.columns(2)
+                    for idx, p in enumerate(photo_list):
+                        col = cols[idx % 2]
+                        try:
+                            img_bytes = get_image_bytes(p['id'])
+                            # 작성자 정보 추출
+                            parts = p['name'].split('_')
+                            writer = parts[1] if len(parts) >= 2 else "알수없음"
+                            col.image(img_bytes, caption=f"by {writer}", use_container_width=True)
+                        except Exception:
+                            col.error("사진을 불러오지 못했습니다.")
 
     with tabs[3]:
         st.subheader("⏳ 타임라인")
