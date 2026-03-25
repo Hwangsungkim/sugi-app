@@ -6,6 +6,7 @@ import json
 import gspread
 import io
 import time
+import os  # 🚨 [v4.1 픽스] 사진 확장자 자동 인식을 위한 필수 도구 추가!
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
@@ -64,7 +65,6 @@ def get_google_services():
     drive_svc = build('drive', 'v3', credentials=creds)
     doc = client.open('couple_app_data')
     
-    # 🚨 시트 탭 매핑 (방어 로직 적용)
     return {
         "main": doc.worksheet('시트1'),
         "memo": doc.worksheet('쪽지함'),
@@ -72,8 +72,8 @@ def get_google_services():
         "date": doc.worksheet('데이트일정'),
         "wish": doc.worksheet('위시리스트'),
         "review": doc.worksheet('데이트후기'),
-        "qna": doc.worksheet('문답데이터'),      # [v4.0 신규] 물리적 탭 분리!
-        "capsule": doc.worksheet('타임캡슐데이터'),  # [v4.0 신규] 물리적 탭 분리!
+        "qna": doc.worksheet('문답데이터'),
+        "capsule": doc.worksheet('타임캡슐데이터'),
         "drive": drive_svc
     }
 
@@ -130,8 +130,8 @@ def load_data():
         "date_schedules": get_large_data(sheet_date),
         "wishlist": get_large_data(sheet_wish),
         "reviews": get_large_data(sheet_review),
-        "qna_data": qna_data,           # A1 분리됨
-        "time_capsules": capsule_data   # A1 분리됨
+        "qna_data": qna_data,
+        "time_capsules": capsule_data
     }
 
 def save_main_data():
@@ -162,13 +162,14 @@ def save_specific_large_data(sheet_obj, data_list):
     sheet_obj.update(values=cell_values, range_name='A2', value_input_option='RAW')
 
 # ==========================================
-# 📸 [v4.0] 2TB 구글 드라이브 사진 연동 모듈
+# 📸 [v4.1] 2TB 구글 드라이브 사진 연동 모듈 (초강력 방어막 장착)
 # ==========================================
-def upload_photo_to_drive(file_bytes, filename):
+def upload_photo_to_drive(file_bytes, filename, mime_type):
     file_metadata = {'name': filename, 'parents': [DRIVE_FOLDER_ID]}
-    # 🚨 외과적 수술 부위: resumable=False 로 변경하여 서버 충돌 원천 차단!
-    media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype='image/jpeg', resumable=False)
-    file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+    # 🚨 외과적 수술: 256KB로 잘게 쪼개고(resumable=True), 진짜 포맷(mime_type)을 알려줍니다.
+    media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype=mime_type, chunksize=256*1024, resumable=True)
+    # 🚨 자동 재시도 5회 장착: 전송 중 끊기면 알아서 다시 연결합니다!
+    file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute(num_retries=5)
     return file.get('id')
 
 def load_photos_from_drive():
@@ -176,7 +177,7 @@ def load_photos_from_drive():
     try:
         results = drive_service.files().list(
             q=f"'{DRIVE_FOLDER_ID}' in parents and trashed=false",
-            pageSize=30, fields="files(id, name)", orderBy="createdTime desc" # 최근 30장만
+            pageSize=30, fields="files(id, name)", orderBy="createdTime desc"
         ).execute()
         return results.get('files', [])
     except Exception as e:
@@ -506,15 +507,21 @@ if check_password():
             align_cls = "user-boy" if is_boy else "user-girl"
             st.markdown(f'<div class="card {align_cls}"><small><b>{m["user"]}</b> | {m["date"]}</small><p style="margin: 5px 0;">{m["content"]}</p><span class="time-text">{m["time"]}</span></div>', unsafe_allow_html=True)
 
-    # 🚀 [v4.0 핵심] 영구 보존 2TB 구글 드라이브 사진첩 적용!
+    # 🚀 [v4.1 핵심 수정] 영구 보존 2TB 구글 드라이브 사진첩 적용!
     with tabs[2]:
         st.subheader("📸 2TB 영구 보존 사진첩")
         img_file = st.file_uploader("사진 올리기 (자동으로 구글 드라이브에 저장됩니다)", type=["jpg", "png", "jpeg"])
         
         if img_file and st.button("☁️ 2TB 드라이브에 안전하게 업로드"):
             with st.spinner("구글 드라이브 궁전으로 사진을 전송하고 있습니다... ⏳"):
-                filename = f"{today_str}_{user_name_only}_{random.randint(1000, 9999)}.jpg"
-                upload_photo_to_drive(img_file.getvalue(), filename)
+                # 🚨 [버그 픽스] 사진의 진짜 확장자(jpg/png)를 알아내서 구글 보안 문지기를 속임수 없이 통과!
+                ext = os.path.splitext(img_file.name)[1]
+                if not ext: ext = ".jpg"
+                filename = f"{today_str}_{user_name_only}_{random.randint(1000, 9999)}{ext}"
+                
+                # MIME 타입까지 정확하게 전달
+                upload_photo_to_drive(img_file.getvalue(), filename, img_file.type)
+                
                 st.session_state.toast_msg = "사진이 드라이브에 영구 저장되었습니다! 🚀"
                 st.rerun()
                 
@@ -527,9 +534,7 @@ if check_password():
         else:
             for p in photos:
                 try:
-                    # 사진 파일 바이트를 가져와서 렌더링 (보안 우회)
                     img_bytes = get_image_bytes(p['id'])
-                    # 파일명에서 날짜와 작성자 정보 예쁘게 파싱
                     title_info = p['name'].split('_')
                     caption_text = f"{title_info[0]} by {title_info[1]}" if len(title_info) >= 2 else p['name']
                     st.image(img_bytes, caption=caption_text, use_container_width=True)
