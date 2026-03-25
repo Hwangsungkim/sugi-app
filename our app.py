@@ -134,7 +134,6 @@ def load_data():
         "time_capsules": capsule_data   # A1 분리됨
     }
 
-# 👇 1개의 전체 저장 대신 핀셋으로 저장하는 Atomic Save 도입 (속도 7배 향상!)
 def save_main_data():
     main_data = {
         "notice": st.session_state.notice,
@@ -167,7 +166,8 @@ def save_specific_large_data(sheet_obj, data_list):
 # ==========================================
 def upload_photo_to_drive(file_bytes, filename):
     file_metadata = {'name': filename, 'parents': [DRIVE_FOLDER_ID]}
-    media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype='image/jpeg', resumable=True)
+    # 🚨 외과적 수술 부위: resumable=False 로 변경하여 서버 충돌 원천 차단!
+    media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype='image/jpeg', resumable=False)
     file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
     return file.get('id')
 
@@ -271,7 +271,7 @@ if check_password():
         if st.button("답변 꾹 저장하기 💾"):
             st.session_state.qna_data[q_key]["hodl"] = hodl_ans
             st.session_state.qna_data[q_key]["sugi"] = sugi_ans
-            save_qna_data() # Atomic Save 도입
+            save_qna_data() 
             st.session_state.toast_msg = "두 사람의 소중한 답변이 영구 저장되었습니다! ✨"
             st.rerun()
 
@@ -686,7 +686,7 @@ if check_password():
                     "created_date": today_str
                 })
                 st.session_state.time_capsules.sort(key=lambda x: x['open_date'])
-                save_capsule_data() # Atomic Save
+                save_capsule_data() 
                 st.session_state.toast_msg = f"{c_date}에 개봉될 타임캡슐을 안전하게 묻었습니다! 🔒"
                 st.rerun()
 
