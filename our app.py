@@ -88,7 +88,13 @@ sheet_qna = services["qna"]
 sheet_capsule = services["capsule"]
 drive_service = services["drive"]
 
-DRIVE_FOLDER_ID = st.secrets.get("DRIVE_FOLDER_ID", "")
+# 🚨 [v4.1.1 픽스] 스트림릿 TOML 금고의 방 구조를 스마트하게 탐색하는 로직
+if "DRIVE_FOLDER_ID" in st.secrets:
+    DRIVE_FOLDER_ID = st.secrets["DRIVE_FOLDER_ID"]
+elif "google_auth" in st.secrets and "DRIVE_FOLDER_ID" in st.secrets["google_auth"]:
+    DRIVE_FOLDER_ID = st.secrets["google_auth"]["DRIVE_FOLDER_ID"]
+else:
+    DRIVE_FOLDER_ID = ""
 
 # ==========================================
 # ⚡️ [v4.0 초고속 엔진] 데이터 로드 및 아토믹 세이브
@@ -162,20 +168,23 @@ def save_specific_large_data(sheet_obj, data_list):
     sheet_obj.update(values=cell_values, range_name='A2', value_input_option='RAW')
 
 # ==========================================
-# 📸 [v4.1] 2TB 구글 드라이브 사진 연동 모듈 (엑스레이 탐지기 장착)
+# 📸 [v4.1] 2TB 구글 드라이브 사진 연동 모듈
 # ==========================================
 def upload_photo_to_drive(file_bytes, filename, mime_type):
     try:
+        if not DRIVE_FOLDER_ID:
+            st.error("🚨 폴더 ID를 찾지 못했습니다! 설정(Secrets)을 확인해주세요.")
+            return None
+            
         file_metadata = {'name': filename, 'parents': [DRIVE_FOLDER_ID]}
         media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype=mime_type, chunksize=256*1024, resumable=True)
         file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute(num_retries=5)
         return file.get('id')
     except Exception as e:
-        # 🚨 외과적 수술: 스트림릿이 덮어버린 진짜 에러 메시지를 화면에 강제 출력!
         if hasattr(e, 'content'):
-            st.error(f"🚨 [구글 서버의 실제 답변]: {e.content.decode('utf-8')}")
+            st.error(f"🚨 [구글 서버 에러]: {e.content.decode('utf-8')}")
         else:
-            st.error(f"🚨 [업로드 실패 원인]: {str(e)}")
+            st.error(f"🚨 [업로드 실패]: {str(e)}")
         return None
 
 def load_photos_from_drive():
@@ -524,10 +533,8 @@ if check_password():
                 if not ext: ext = ".jpg"
                 filename = f"{today_str}_{user_name_only}_{random.randint(1000, 9999)}{ext}"
                 
-                # 🚨 에러 엑스레이: 이 함수 안에서 에러가 잡혀서 화면에 출력됩니다.
                 file_id = upload_photo_to_drive(img_file.getvalue(), filename, img_file.type)
                 
-                # 에러 없이 성공(id 반환)했을 때만 축하 메시지를 띄웁니다.
                 if file_id:
                     st.session_state.toast_msg = "사진이 드라이브에 영구 저장되었습니다! 🚀"
                     st.rerun()
