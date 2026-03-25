@@ -6,7 +6,7 @@ import json
 import gspread
 import io
 import time
-import os  # 🚨 [v4.1 픽스] 사진 확장자 자동 인식을 위한 필수 도구 추가!
+import os
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
@@ -162,15 +162,21 @@ def save_specific_large_data(sheet_obj, data_list):
     sheet_obj.update(values=cell_values, range_name='A2', value_input_option='RAW')
 
 # ==========================================
-# 📸 [v4.1] 2TB 구글 드라이브 사진 연동 모듈 (초강력 방어막 장착)
+# 📸 [v4.1] 2TB 구글 드라이브 사진 연동 모듈 (엑스레이 탐지기 장착)
 # ==========================================
 def upload_photo_to_drive(file_bytes, filename, mime_type):
-    file_metadata = {'name': filename, 'parents': [DRIVE_FOLDER_ID]}
-    # 🚨 외과적 수술: 256KB로 잘게 쪼개고(resumable=True), 진짜 포맷(mime_type)을 알려줍니다.
-    media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype=mime_type, chunksize=256*1024, resumable=True)
-    # 🚨 자동 재시도 5회 장착: 전송 중 끊기면 알아서 다시 연결합니다!
-    file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute(num_retries=5)
-    return file.get('id')
+    try:
+        file_metadata = {'name': filename, 'parents': [DRIVE_FOLDER_ID]}
+        media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype=mime_type, chunksize=256*1024, resumable=True)
+        file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute(num_retries=5)
+        return file.get('id')
+    except Exception as e:
+        # 🚨 외과적 수술: 스트림릿이 덮어버린 진짜 에러 메시지를 화면에 강제 출력!
+        if hasattr(e, 'content'):
+            st.error(f"🚨 [구글 서버의 실제 답변]: {e.content.decode('utf-8')}")
+        else:
+            st.error(f"🚨 [업로드 실패 원인]: {str(e)}")
+        return None
 
 def load_photos_from_drive():
     if not DRIVE_FOLDER_ID: return []
@@ -514,16 +520,17 @@ if check_password():
         
         if img_file and st.button("☁️ 2TB 드라이브에 안전하게 업로드"):
             with st.spinner("구글 드라이브 궁전으로 사진을 전송하고 있습니다... ⏳"):
-                # 🚨 [버그 픽스] 사진의 진짜 확장자(jpg/png)를 알아내서 구글 보안 문지기를 속임수 없이 통과!
                 ext = os.path.splitext(img_file.name)[1]
                 if not ext: ext = ".jpg"
                 filename = f"{today_str}_{user_name_only}_{random.randint(1000, 9999)}{ext}"
                 
-                # MIME 타입까지 정확하게 전달
-                upload_photo_to_drive(img_file.getvalue(), filename, img_file.type)
+                # 🚨 에러 엑스레이: 이 함수 안에서 에러가 잡혀서 화면에 출력됩니다.
+                file_id = upload_photo_to_drive(img_file.getvalue(), filename, img_file.type)
                 
-                st.session_state.toast_msg = "사진이 드라이브에 영구 저장되었습니다! 🚀"
-                st.rerun()
+                # 에러 없이 성공(id 반환)했을 때만 축하 메시지를 띄웁니다.
+                if file_id:
+                    st.session_state.toast_msg = "사진이 드라이브에 영구 저장되었습니다! 🚀"
+                    st.rerun()
                 
         st.divider()
         
