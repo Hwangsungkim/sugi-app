@@ -44,7 +44,6 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-
 # --- 🌐 한국 시간(KST) 설정 ---
 KST = pytz.timezone('Asia/Seoul')
 now_kst = datetime.datetime.now(KST)
@@ -167,7 +166,7 @@ def save_specific_large_data(sheet_obj, data_list):
     sheet_obj.update(values=cell_values, range_name='A2', value_input_option='RAW')
 
 # ==========================================
-# 📸 2TB 구글 드라이브 사진 연동 및 관리 모듈 (v4.4 업데이트)
+# 📸 2TB 구글 드라이브 사진 연동 및 관리 모듈
 # ==========================================
 def upload_photo_to_drive(file_bytes, filename, mime_type):
     try:
@@ -186,7 +185,6 @@ def upload_photo_to_drive(file_bytes, filename, mime_type):
             st.error(f"🚨 [업로드 실패]: {str(e)}")
         return None
 
-# 🚨 [v4.4] 더 보기(페이징)를 위해 limit 파라미터 추가
 def load_photos_from_drive(limit=20):
     if not DRIVE_FOLDER_ID: return []
     try:
@@ -199,7 +197,6 @@ def load_photos_from_drive(limit=20):
         st.error(f"구글 드라이브 접근 에러: {e}")
         return []
 
-# 🚨 [v4.4] 추억 지우개 (삭제 API)
 def delete_photo_from_drive(file_id):
     try:
         drive_service.files().delete(fileId=file_id).execute()
@@ -252,54 +249,10 @@ if check_password():
             st.session_state.current_mood_date = today_str
             save_main_data()
 
-    # 🚨 [v4.4] 사진 페이징 메모리 장착 (기본 20장 시작)
     if "photo_limit" not in st.session_state:
         st.session_state.photo_limit = 20
 
-    qna_list = [
-        "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?",
-        "3. 내가 가장 사랑스러워 보일 때는 언제야?", "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?",
-        "5. 지금 당장 훌쩍 떠난다면 같이 가고 싶은 여행지는?", "6. 지금까지 우리의 가장 완벽했던 데이트는 언제였어?",
-        "7. 우리의 첫 키스(뽀뽀) 때 어떤 기분이었어?", "8. 내가 해준 음식 중 최고의 메뉴는?",
-        "9. 서로의 연락처 저장명과 그렇게 정한 이유는 뭐야?", "10. 화났을 때 내 기분을 100% 풀어주는 최고의 방법은?",
-        "11. 나에게 들었던 가장 감동적인 말은 무엇이었어?", "12. 꼭 같이 배워보고 싶은 취미나 운동이 있다면?",
-        "13. 나의 어떤 점을 가장 닮고 싶어?", "14. 지금까지 만나면서 나에게 가장 고마웠던 순간은?",
-        "15. 싸웠을 때 우리의 암묵적인 룰을 하나 정한다면?", "16. 나를 생각하면 가장 먼저 떠오르는 노래는?",
-        "17. 내가 가장 섹시해(멋있어/예뻐) 보일 때는 언제야?", "18. 서로에게 주고 싶은 가장 특별하고 의미 있는 선물은?",
-        "19. 우리의 첫 데이트 때, 겉으론 안 그랬지만 속마음은 어땠어?", "20. 나를 동물로 표현한다면 어떤 동물이고 이유는 뭐야?",
-        "21. 우리의 연애를 영화 장르로 따지면 어떤 장르일까?", "22. 하루 동안 서로 몸이 바뀐다면 가장 해보고 싶은 것은?",
-        "23. 서로의 가족에게 해주고 싶은 작은 이벤트가 있다면?", "24. 폰에 있는 우리의 커플 사진 중 가장 좋아하는 사진은?",
-        "25. 나를 만나고 나서 긍정적으로 변한 점이 있다면?", "26. 1년 뒤 오늘, 우리는 어떤 모습으로 무엇을 하고 있을까?",
-        "27. 10년 뒤 우리는 서로에게 어떤 사람일까?", "28. 이번 주말, 나랑 하루 종일 방 안에서만 놀기 vs 하루 종일 밖에서 놀기",
-        "29. 서로에게 절대 변치 말자고 엄지 걸고 약속하고 싶은 것 1가지는?", "30. 지금 당장 상대방을 꽉 안아주면서 해주고 싶은 말은?"
-    ]
-
-    today_ordinal = datetime.datetime.now(KST).toordinal()
-    q_index = today_ordinal % 30
-    today_question = qna_list[q_index]
-    q_key = f"qna_{q_index}"
-
-    if "qna_data" not in st.session_state:
-        st.session_state.qna_data = {}
-    if q_key not in st.session_state.qna_data:
-        st.session_state.qna_data[q_key] = {"hodl": "", "sugi": ""}
-
-    with st.expander(f"💌 오늘의 문답 (D-{30 - q_index}일 남음)", expanded=True):
-        st.subheader(today_question)
-        col1, col2 = st.columns(2)
-        with col1:
-            hodl_ans = st.text_area("👦 HODL님의 답변", value=st.session_state.qna_data[q_key]["hodl"], height=100)
-        with col2:
-            sugi_ans = st.text_area("👩 수기님의 답변", value=st.session_state.qna_data[q_key]["sugi"], height=100)
-            
-        if st.button("답변 꾹 저장하기 💾"):
-            st.session_state.qna_data[q_key]["hodl"] = hodl_ans
-            st.session_state.qna_data[q_key]["sugi"] = sugi_ans
-            save_qna_data() 
-            st.session_state.toast_msg = "두 사람의 소중한 답변이 영구 저장되었습니다! ✨"
-            st.rerun()
-
-    # 📌 🌙 낮/밤 커플 테마 자동 전환 로직
+    # 🚨 [v4.5 아키텍처 변경] 접속자가 누구인지 가장 먼저 식별하기 위해 사이드바 상단부를 위로 끌어올림!
     with st.sidebar:
         user_type = st.radio("👤 접속자", ["수기남자친구 👦", "수기 👧"])
         user_name_only = "수기남자친구" if "남자친구" in user_type else "수기"
@@ -393,6 +346,85 @@ if check_password():
             st.session_state.toast_msg = "공지사항이 성공적으로 변경되었습니다! 📢"
             st.rerun()
 
+    # ==========================================
+    # 💌 [Task 2] 매일매일 30문 30답 (블라인드 시스템 탑재)
+    # ==========================================
+    qna_list = [
+        "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?",
+        "3. 내가 가장 사랑스러워 보일 때는 언제야?", "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?",
+        "5. 지금 당장 훌쩍 떠난다면 같이 가고 싶은 여행지는?", "6. 지금까지 우리의 가장 완벽했던 데이트는 언제였어?",
+        "7. 우리의 첫 키스(뽀뽀) 때 어떤 기분이었어?", "8. 내가 해준 음식 중 최고의 메뉴는?",
+        "9. 서로의 연락처 저장명과 그렇게 정한 이유는 뭐야?", "10. 화났을 때 내 기분을 100% 풀어주는 최고의 방법은?",
+        "11. 나에게 들었던 가장 감동적인 말은 무엇이었어?", "12. 꼭 같이 배워보고 싶은 취미나 운동이 있다면?",
+        "13. 나의 어떤 점을 가장 닮고 싶어?", "14. 지금까지 만나면서 나에게 가장 고마웠던 순간은?",
+        "15. 싸웠을 때 우리의 암묵적인 룰을 하나 정한다면?", "16. 나를 생각하면 가장 먼저 떠오르는 노래는?",
+        "17. 내가 가장 섹시해(멋있어/예뻐) 보일 때는 언제야?", "18. 서로에게 주고 싶은 가장 특별하고 의미 있는 선물은?",
+        "19. 우리의 첫 데이트 때, 겉으론 안 그랬지만 속마음은 어땠어?", "20. 나를 동물로 표현한다면 어떤 동물이고 이유는 뭐야?",
+        "21. 우리의 연애를 영화 장르로 따지면 어떤 장르일까?", "22. 하루 동안 서로 몸이 바뀐다면 가장 해보고 싶은 것은?",
+        "23. 서로의 가족에게 해주고 싶은 작은 이벤트가 있다면?", "24. 폰에 있는 우리의 커플 사진 중 가장 좋아하는 사진은?",
+        "25. 나를 만나고 나서 긍정적으로 변한 점이 있다면?", "26. 1년 뒤 오늘, 우리는 어떤 모습으로 무엇을 하고 있을까?",
+        "27. 10년 뒤 우리는 서로에게 어떤 사람일까?", "28. 이번 주말, 나랑 하루 종일 방 안에서만 놀기 vs 하루 종일 밖에서 놀기",
+        "29. 서로에게 절대 변치 말자고 엄지 걸고 약속하고 싶은 것 1가지는?", "30. 지금 당장 상대방을 꽉 안아주면서 해주고 싶은 말은?"
+    ]
+
+    today_ordinal = datetime.datetime.now(KST).toordinal()
+    q_index = today_ordinal % 30
+    today_question = qna_list[q_index]
+    q_key = f"qna_{q_index}"
+
+    if "qna_data" not in st.session_state:
+        st.session_state.qna_data = {}
+    if q_key not in st.session_state.qna_data:
+        st.session_state.qna_data[q_key] = {"hodl": "", "sugi": ""}
+
+    with st.expander(f"💌 오늘의 문답 (D-{30 - q_index}일 남음)", expanded=True):
+        st.subheader(today_question)
+        
+        # 🚨 [v4.5] 블라인드 룰 검증 로직
+        ans_boy = st.session_state.qna_data[q_key].get("hodl", "")
+        ans_girl = st.session_state.qna_data[q_key].get("sugi", "")
+        both_answered = bool(ans_boy.strip() and ans_girl.strip())
+        
+        col1, col2 = st.columns(2)
+        new_ans_boy = ans_boy
+        new_ans_girl = ans_girl
+        
+        with col1:
+            st.markdown("👦 **수기남자친구님의 답변**")
+            if user_name_only == "수기남자친구":
+                # 내가 수기남자친구일 때는 맘껏 작성
+                new_ans_boy = st.text_area("내 답변 작성", value=ans_boy, height=100, label_visibility="collapsed")
+            else:
+                # 수기님이 볼 때 (조건부 블라인드)
+                if both_answered:
+                    st.info(ans_boy)
+                elif ans_boy.strip():
+                    st.warning("🔒 수기남자친구님이 답변을 완료했어요! 수기님도 답변을 작성해야 볼 수 있어요.")
+                else:
+                    st.caption("아직 답변을 작성하지 않았어요 🤫")
+                    
+        with col2:
+            st.markdown("👩 **수기님의 답변**")
+            if user_name_only == "수기":
+                # 내가 수기일 때는 맘껏 작성
+                new_ans_girl = st.text_area("내 답변 작성", value=ans_girl, height=100, label_visibility="collapsed")
+            else:
+                # 수기남자친구님이 볼 때 (조건부 블라인드)
+                if both_answered:
+                    st.info(ans_girl)
+                elif ans_girl.strip():
+                    st.warning("🔒 수기님이 답변을 완료했어요! 수기남자친구님도 답변을 작성해야 볼 수 있어요.")
+                else:
+                    st.caption("아직 답변을 작성하지 않았어요 🤫")
+            
+        if st.button("내 답변 꾹 저장하기 💾"):
+            st.session_state.qna_data[q_key]["hodl"] = new_ans_boy
+            st.session_state.qna_data[q_key]["sugi"] = new_ans_girl
+            save_qna_data() 
+            st.session_state.toast_msg = "소중한 답변이 영구 저장되었습니다! ✨"
+            st.rerun()
+
+    # 📌 사이드바 하단부 (위로 올린 부분 제외)
     with st.sidebar:
         st.markdown(f"""
             <div style="background-color: rgba(128,128,128,0.05); padding: 10px; border-radius: 10px; border-left: 5px solid {accent_color}; margin-bottom: 15px;">
@@ -520,7 +552,6 @@ if check_password():
             align_cls = "user-boy" if is_boy else "user-girl"
             st.markdown(f'<div class="card {align_cls}"><small><b>{m["user"]}</b> | {m["date"]}</small><p style="margin: 5px 0;">{m["content"]}</p><span class="time-text">{m["time"]}</span></div>', unsafe_allow_html=True)
 
-    # 🚀 [v4.4] 추억 지우개 & 페이징(더 보기) 시스템 탑재
     with tabs[2]:
         st.subheader("📸 우리들의 추억 저장소")
         
@@ -559,7 +590,6 @@ if check_password():
                 
         st.divider()
         
-        # 🚨 [v4.4] 제한된 수(photo_limit)만큼만 사진을 가져와서 속도 방어!
         photos = load_photos_from_drive(limit=st.session_state.photo_limit)
         
         if not photos:
@@ -593,11 +623,9 @@ if check_password():
                             parts = p['name'].split('_')
                             writer = parts[1] if len(parts) >= 2 else "알수없음"
                             
-                            # 사진 출력
                             col.image(img_bytes, caption=f"by {writer}", use_container_width=True)
                             
-                            # 🚨 [v4.4] 추억 지우개 버튼 배치 (사진 바로 아래)
-                            if col.button("🗑️ 지우기", key=f"del_img_{p['id']}"):
+                            if col.button("🗑️ 지우기", key=f"del_img_{p['id']}")):
                                 if delete_photo_from_drive(p['id']):
                                     st.session_state.toast_msg = "선택한 추억이 삭제되었습니다. 🗑️"
                                     st.rerun()
@@ -607,8 +635,6 @@ if check_password():
 
         st.divider()
         
-        # 🚨 [v4.4] 더 보기(페이징) 버튼 로직
-        # 불러온 사진 갯수가 현재 한도(Limit)와 같거나 크다면, 아직 구글 드라이브에 과거 사진이 더 남아있을 확률이 높음.
         if len(photos) >= st.session_state.photo_limit:
             if st.button("⬇️ 과거 추억 더 불러오기 (20장)"):
                 st.session_state.photo_limit += 20
