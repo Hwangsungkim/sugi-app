@@ -44,6 +44,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
+
 # --- 🌐 한국 시간(KST) 설정 ---
 KST = pytz.timezone('Asia/Seoul')
 now_kst = datetime.datetime.now(KST)
@@ -252,7 +253,6 @@ if check_password():
     if "photo_limit" not in st.session_state:
         st.session_state.photo_limit = 20
 
-    # 🚨 [v4.5 아키텍처 변경] 접속자가 누구인지 가장 먼저 식별하기 위해 사이드바 상단부를 위로 끌어올림!
     with st.sidebar:
         user_type = st.radio("👤 접속자", ["수기남자친구 👦", "수기 👧"])
         user_name_only = "수기남자친구" if "남자친구" in user_type else "수기"
@@ -380,7 +380,6 @@ if check_password():
     with st.expander(f"💌 오늘의 문답 (D-{30 - q_index}일 남음)", expanded=True):
         st.subheader(today_question)
         
-        # 🚨 [v4.5] 블라인드 룰 검증 로직
         ans_boy = st.session_state.qna_data[q_key].get("hodl", "")
         ans_girl = st.session_state.qna_data[q_key].get("sugi", "")
         both_answered = bool(ans_boy.strip() and ans_girl.strip())
@@ -392,10 +391,8 @@ if check_password():
         with col1:
             st.markdown("👦 **수기남자친구님의 답변**")
             if user_name_only == "수기남자친구":
-                # 내가 수기남자친구일 때는 맘껏 작성
                 new_ans_boy = st.text_area("내 답변 작성", value=ans_boy, height=100, label_visibility="collapsed")
             else:
-                # 수기님이 볼 때 (조건부 블라인드)
                 if both_answered:
                     st.info(ans_boy)
                 elif ans_boy.strip():
@@ -406,10 +403,8 @@ if check_password():
         with col2:
             st.markdown("👩 **수기님의 답변**")
             if user_name_only == "수기":
-                # 내가 수기일 때는 맘껏 작성
                 new_ans_girl = st.text_area("내 답변 작성", value=ans_girl, height=100, label_visibility="collapsed")
             else:
-                # 수기남자친구님이 볼 때 (조건부 블라인드)
                 if both_answered:
                     st.info(ans_girl)
                 elif ans_girl.strip():
@@ -424,7 +419,7 @@ if check_password():
             st.session_state.toast_msg = "소중한 답변이 영구 저장되었습니다! ✨"
             st.rerun()
 
-    # 📌 사이드바 하단부 (위로 올린 부분 제외)
+    # 📌 사이드바 하단부
     with st.sidebar:
         st.markdown(f"""
             <div style="background-color: rgba(128,128,128,0.05); padding: 10px; border-radius: 10px; border-left: 5px solid {accent_color}; margin-bottom: 15px;">
@@ -625,7 +620,8 @@ if check_password():
                             
                             col.image(img_bytes, caption=f"by {writer}", use_container_width=True)
                             
-                            if col.button("🗑️ 지우기", key=f"del_img_{p['id']}")):
+                            # 🚨 에러 원인이었던 이중 괄호 "))" 1글자 완벽 삭제 완료!
+                            if col.button("🗑️ 지우기", key=f"del_img_{p['id']}"):
                                 if delete_photo_from_drive(p['id']):
                                     st.session_state.toast_msg = "선택한 추억이 삭제되었습니다. 🗑️"
                                     st.rerun()
