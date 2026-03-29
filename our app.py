@@ -51,20 +51,22 @@ now_kst = datetime.datetime.now(KST)
 today_str = str(now_kst.date())
 current_time_str = now_kst.strftime("%H:%M")
 
-# --- 🚀 구글 시트 & 드라이브 API 연동 설정 ---
+# --- 🚀 구글 보안 마스터 키 (공용) ---
 @st.cache_resource
-def get_google_services():
+def get_credentials():
     scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
     if "google_auth" in st.secrets:
         token_info = json.loads(st.secrets["google_auth"]["token"])
-        creds = Credentials.from_authorized_user_info(token_info, scopes)
+        return Credentials.from_authorized_user_info(token_info, scopes)
     else:
-        creds = Credentials.from_authorized_user_file('token.json', scopes)
-    
+        return Credentials.from_authorized_user_file('token.json', scopes)
+
+# --- 🚀 구글 시트 전용 파이프 (고정 캐시) ---
+@st.cache_resource
+def get_sheets():
+    creds = get_credentials()
     client = gspread.authorize(creds)
-    drive_svc = build('drive', 'v3', credentials=creds)
     doc = client.open('couple_app_data')
-    
     return {
         "main": doc.worksheet('시트1'),
         "memo": doc.worksheet('쪽지함'),
@@ -73,27 +75,32 @@ def get_google_services():
         "wish": doc.worksheet('위시리스트'),
         "review": doc.worksheet('데이트후기'),
         "qna": doc.worksheet('문답데이터'),
-        "capsule": doc.worksheet('타임캡슐데이터'),
-        "drive": drive_svc
+        "capsule": doc.worksheet('타임캡슐데이터')
     }
 
-services = get_google_services()
-sheet_main = services["main"]
-sheet_memo = services["memo"]
-sheet_time = services["time"]
-sheet_date = services["date"]
-sheet_wish = services["wish"]
-sheet_review = services["review"]
-sheet_qna = services["qna"]
-sheet_capsule = services["capsule"]
-drive_service = services["drive"]
+sheets = get_sheets()
+sheet_main = sheets["main"]
+sheet_memo = sheets["memo"]
+sheet_time = sheets["time"]
+sheet_date = sheets["date"]
+sheet_wish = sheets["wish"]
+sheet_review = sheets["review"]
+sheet_qna = sheets["qna"]
+sheet_capsule = sheets["capsule"]
 
+# 스트림릿 TOML 금고의 방 구조 스마트 탐색
 if "DRIVE_FOLDER_ID" in st.secrets:
     DRIVE_FOLDER_ID = st.secrets["DRIVE_FOLDER_ID"]
 elif "google_auth" in st.secrets and "DRIVE_FOLDER_ID" in st.secrets["google_auth"]:
     DRIVE_FOLDER_ID = st.secrets["google_auth"]["DRIVE_FOLDER_ID"]
 else:
     DRIVE_FOLDER_ID = ""
+
+# --- 🚨 핵심 해결책: 구글 드라이브 전용 1회용 파이프 생성 (Segfault 완벽 차단) ---
+def get_drive_service():
+    creds = get_credentials()
+    return build('drive', 'v3', credentials=creds, cache_discovery=False)
+
 
 # ==========================================
 # ⚡️ 데이터 로드 및 아토믹 세이브
@@ -167,7 +174,7 @@ def save_specific_large_data(sheet_obj, data_list):
     sheet_obj.update(values=cell_values, range_name='A2', value_input_option='RAW')
 
 # ==========================================
-# 📸 2TB 구글 드라이브 사진 연동 및 관리 모듈
+# 📸 2TB 구글 드라이브 사진 연동 및 관리 모듈 (v4.6 이원화 아키텍처)
 # ==========================================
 def upload_photo_to_drive(file_bytes, filename, mime_type):
     try:
@@ -175,9 +182,10 @@ def upload_photo_to_drive(file_bytes, filename, mime_type):
             st.error("🚨 폴더 ID를 찾지 못했습니다! 설정(Secrets)을 확인해주세요.")
             return None
             
+        svc = get_drive_service() # 1회용 파이프 연결
         file_metadata = {'name': filename, 'parents': [DRIVE_FOLDER_ID]}
         media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype=mime_type, chunksize=256*1024, resumable=True)
-        file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute(num_retries=5)
+        file = svc.files().create(body=file_metadata, media_body=media, fields='id').execute(num_retries=5)
         return file.get('id')
     except Exception as e:
         if hasattr(e, 'content'):
@@ -189,7 +197,8 @@ def upload_photo_to_drive(file_bytes, filename, mime_type):
 def load_photos_from_drive(limit=20):
     if not DRIVE_FOLDER_ID: return []
     try:
-        results = drive_service.files().list(
+        svc = get_drive_service() # 1회용 파이프 연결
+        results = svc.files().list(
             q=f"'{DRIVE_FOLDER_ID}' in parents and trashed=false",
             pageSize=limit, fields="files(id, name)", orderBy="createdTime desc"
         ).execute()
@@ -200,7 +209,8 @@ def load_photos_from_drive(limit=20):
 
 def delete_photo_from_drive(file_id):
     try:
-        drive_service.files().delete(fileId=file_id).execute()
+        svc = get_drive_service() # 1회용 파이프 연결
+        svc.files().delete(fileId=file_id).execute()
         return True
     except Exception as e:
         st.error(f"사진 삭제 실패: {e}")
@@ -208,7 +218,8 @@ def delete_photo_from_drive(file_id):
 
 @st.cache_data(show_spinner=False, ttl=3600)
 def get_image_bytes(file_id):
-    request = drive_service.files().get_media(fileId=file_id)
+    svc = get_drive_service() # 캐시 내부에서도 1회용 안전 파이프 생성
+    request = svc.files().get_media(fileId=file_id)
     fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, request)
     done = False
@@ -620,7 +631,6 @@ if check_password():
                             
                             col.image(img_bytes, caption=f"by {writer}", use_container_width=True)
                             
-                            # 🚨 오타 1글자 완전 적출! 완벽 수정 완료!
                             if col.button("🗑️ 지우기", key=f"del_img_{p['id']}"):
                                 if delete_photo_from_drive(p['id']):
                                     st.session_state.toast_msg = "선택한 추억이 삭제되었습니다. 🗑️"
