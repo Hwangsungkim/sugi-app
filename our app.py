@@ -16,6 +16,66 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="수기 커플 노트", page_icon="❤️", layout="centered")
 
 # ==========================================
+# 🌸 [v4.7 업데이트] 봄날의 벚꽃 흩날림 이펙트 모듈 (CSS)
+# ==========================================
+def show_cherry_blossoms():
+    st.markdown("""
+        <style>
+        .blossom {
+            color: #FFB7C5;
+            font-size: 1.2em;
+            font-family: Arial, sans-serif;
+            text-shadow: 0 0 5px #fff;
+            position: fixed;
+            top: -10%;
+            z-index: 9999;
+            user-select: none;
+            cursor: default;
+            pointer-events: none; /* 🚨 마우스 클릭 방해 방지 완벽 적용 */
+            animation-name: fall, shake;
+            animation-duration: 10s, 3s;
+            animation-timing-function: linear, ease-in-out;
+            animation-iteration-count: infinite, infinite;
+            animation-play-state: running, running;
+        }
+        .blossom:nth-of-type(0) { left: 5%; animation-delay: 0s, 0s; }
+        .blossom:nth-of-type(1) { left: 15%; animation-delay: 1s, 1s; font-size: 1.5em; }
+        .blossom:nth-of-type(2) { left: 25%; animation-delay: 6s, 0.5s; font-size: 1.1em; }
+        .blossom:nth-of-type(3) { left: 35%; animation-delay: 4s, 2s; font-size: 1.3em; }
+        .blossom:nth-of-type(4) { left: 45%; animation-delay: 2s, 2s; font-size: 1.4em; }
+        .blossom:nth-of-type(5) { left: 55%; animation-delay: 8s, 3s; font-size: 1.2em; }
+        .blossom:nth-of-type(6) { left: 65%; animation-delay: 6s, 2s; font-size: 1.5em; }
+        .blossom:nth-of-type(7) { left: 75%; animation-delay: 2.5s, 1s; font-size: 1.1em; }
+        .blossom:nth-of-type(8) { left: 85%; animation-delay: 1s, 0s; font-size: 1.4em; }
+        .blossom:nth-of-type(9) { left: 95%; animation-delay: 3s, 1.5s; font-size: 1.2em; }
+        
+        @keyframes fall {
+            0% { top: -10%; }
+            100% { top: 100%; }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0) rotate(0deg); }
+            50% { transform: translateX(80px) rotate(180deg); }
+        }
+        </style>
+        <div aria-hidden="true">
+            <div class="blossom">🌸</div>
+            <div class="blossom">🌸</div>
+            <div class="blossom">🌸</div>
+            <div class="blossom">🌸</div>
+            <div class="blossom">🌸</div>
+            <div class="blossom">🌸</div>
+            <div class="blossom">🌸</div>
+            <div class="blossom">🌸</div>
+            <div class="blossom">🌸</div>
+            <div class="blossom">🌸</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+# 앱 실행 시 가장 먼저 벚꽃을 뿌립니다!
+show_cherry_blossoms()
+
+# ==========================================
 # 🍎 아이폰(iOS) 전용 홈 화면 아이콘 강제 주입
 # ==========================================
 components.html("""
@@ -88,7 +148,6 @@ sheet_review = sheets["review"]
 sheet_qna = sheets["qna"]
 sheet_capsule = sheets["capsule"]
 
-# 스트림릿 TOML 금고의 방 구조 스마트 탐색
 if "DRIVE_FOLDER_ID" in st.secrets:
     DRIVE_FOLDER_ID = st.secrets["DRIVE_FOLDER_ID"]
 elif "google_auth" in st.secrets and "DRIVE_FOLDER_ID" in st.secrets["google_auth"]:
@@ -96,7 +155,7 @@ elif "google_auth" in st.secrets and "DRIVE_FOLDER_ID" in st.secrets["google_aut
 else:
     DRIVE_FOLDER_ID = ""
 
-# --- 🚨 핵심 해결책: 구글 드라이브 전용 1회용 파이프 생성 (Segfault 완벽 차단) ---
+# --- 🚨 구글 드라이브 전용 1회용 파이프 생성 ---
 def get_drive_service():
     creds = get_credentials()
     return build('drive', 'v3', credentials=creds, cache_discovery=False)
@@ -174,7 +233,7 @@ def save_specific_large_data(sheet_obj, data_list):
     sheet_obj.update(values=cell_values, range_name='A2', value_input_option='RAW')
 
 # ==========================================
-# 📸 2TB 구글 드라이브 사진 연동 및 관리 모듈 (v4.6 이원화 아키텍처)
+# 📸 2TB 구글 드라이브 사진 연동 및 관리 모듈 
 # ==========================================
 def upload_photo_to_drive(file_bytes, filename, mime_type):
     try:
@@ -182,7 +241,7 @@ def upload_photo_to_drive(file_bytes, filename, mime_type):
             st.error("🚨 폴더 ID를 찾지 못했습니다! 설정(Secrets)을 확인해주세요.")
             return None
             
-        svc = get_drive_service() # 1회용 파이프 연결
+        svc = get_drive_service() 
         file_metadata = {'name': filename, 'parents': [DRIVE_FOLDER_ID]}
         media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype=mime_type, chunksize=256*1024, resumable=True)
         file = svc.files().create(body=file_metadata, media_body=media, fields='id').execute(num_retries=5)
@@ -197,7 +256,7 @@ def upload_photo_to_drive(file_bytes, filename, mime_type):
 def load_photos_from_drive(limit=20):
     if not DRIVE_FOLDER_ID: return []
     try:
-        svc = get_drive_service() # 1회용 파이프 연결
+        svc = get_drive_service() 
         results = svc.files().list(
             q=f"'{DRIVE_FOLDER_ID}' in parents and trashed=false",
             pageSize=limit, fields="files(id, name)", orderBy="createdTime desc"
@@ -209,7 +268,7 @@ def load_photos_from_drive(limit=20):
 
 def delete_photo_from_drive(file_id):
     try:
-        svc = get_drive_service() # 1회용 파이프 연결
+        svc = get_drive_service() 
         svc.files().delete(fileId=file_id).execute()
         return True
     except Exception as e:
@@ -218,7 +277,7 @@ def delete_photo_from_drive(file_id):
 
 @st.cache_data(show_spinner=False, ttl=3600)
 def get_image_bytes(file_id):
-    svc = get_drive_service() # 캐시 내부에서도 1회용 안전 파이프 생성
+    svc = get_drive_service() 
     request = svc.files().get_media(fileId=file_id)
     fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, request)
