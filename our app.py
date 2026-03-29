@@ -16,22 +16,22 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="수기 커플 노트", page_icon="❤️", layout="centered")
 
 # ==========================================
-# 🌸 [v4.7 업데이트] 봄날의 벚꽃 흩날림 이펙트 모듈 (CSS)
+# 🌸 [v4.8] 봄날의 벚꽃 흩날림 이펙트 (투명도 조절로 은은하게!)
 # ==========================================
 def show_cherry_blossoms():
     st.markdown("""
         <style>
         .blossom {
-            color: #FFB7C5;
+            color: rgba(255, 183, 197, 0.6); /* 투명도를 주어 수채화처럼 연하게 */
             font-size: 1.2em;
             font-family: Arial, sans-serif;
-            text-shadow: 0 0 5px #fff;
+            text-shadow: 0 0 3px rgba(255, 183, 197, 0.4);
             position: fixed;
             top: -10%;
             z-index: 9999;
             user-select: none;
             cursor: default;
-            pointer-events: none; /* 🚨 마우스 클릭 방해 방지 완벽 적용 */
+            pointer-events: none; /* 클릭 통과 */
             animation-name: fall, shake;
             animation-duration: 10s, 3s;
             animation-timing-function: linear, ease-in-out;
@@ -72,7 +72,6 @@ def show_cherry_blossoms():
         </div>
     """, unsafe_allow_html=True)
 
-# 앱 실행 시 가장 먼저 벚꽃을 뿌립니다!
 show_cherry_blossoms()
 
 # ==========================================
@@ -86,24 +85,6 @@ components.html("""
         window.parent.document.head.appendChild(link);
     </script>
 """, height=0, width=0)
-
-# ==========================================
-# 📱 PWA 앱 설치 유도 배너
-# ==========================================
-st.markdown("""
-    <style>
-    .pwa-banner {
-        background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-        padding: 12px; border-radius: 10px; text-align: center; 
-        font-size: 0.9em; font-weight: bold; color: #fff; margin-bottom: 20px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    </style>
-    <div class="pwa-banner">
-        💡 꿀팁: 아이폰 단축어 앱을 사용하면 우리 사진으로 예쁜 아이콘을 만들 수 있어요! ❤️
-    </div>
-""", unsafe_allow_html=True)
-
 
 # --- 🌐 한국 시간(KST) 설정 ---
 KST = pytz.timezone('Asia/Seoul')
@@ -121,7 +102,7 @@ def get_credentials():
     else:
         return Credentials.from_authorized_user_file('token.json', scopes)
 
-# --- 🚀 구글 시트 전용 파이프 (고정 캐시) ---
+# --- 🚀 구글 시트 전용 파이프 ---
 @st.cache_resource
 def get_sheets():
     creds = get_credentials()
@@ -155,7 +136,6 @@ elif "google_auth" in st.secrets and "DRIVE_FOLDER_ID" in st.secrets["google_aut
 else:
     DRIVE_FOLDER_ID = ""
 
-# --- 🚨 구글 드라이브 전용 1회용 파이프 생성 ---
 def get_drive_service():
     creds = get_credentials()
     return build('drive', 'v3', credentials=creds, cache_discovery=False)
@@ -232,25 +212,16 @@ def save_specific_large_data(sheet_obj, data_list):
     sheet_obj.batch_clear(['A2:A'])
     sheet_obj.update(values=cell_values, range_name='A2', value_input_option='RAW')
 
-# ==========================================
-# 📸 2TB 구글 드라이브 사진 연동 및 관리 모듈 
-# ==========================================
 def upload_photo_to_drive(file_bytes, filename, mime_type):
     try:
-        if not DRIVE_FOLDER_ID:
-            st.error("🚨 폴더 ID를 찾지 못했습니다! 설정(Secrets)을 확인해주세요.")
-            return None
-            
+        if not DRIVE_FOLDER_ID: return None
         svc = get_drive_service() 
         file_metadata = {'name': filename, 'parents': [DRIVE_FOLDER_ID]}
         media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype=mime_type, chunksize=256*1024, resumable=True)
         file = svc.files().create(body=file_metadata, media_body=media, fields='id').execute(num_retries=5)
         return file.get('id')
     except Exception as e:
-        if hasattr(e, 'content'):
-            st.error(f"🚨 [구글 서버 에러]: {e.content.decode('utf-8')}")
-        else:
-            st.error(f"🚨 [업로드 실패]: {str(e)}")
+        st.error(f"🚨 [업로드 실패]: {str(e)}")
         return None
 
 def load_photos_from_drive(limit=20):
@@ -263,7 +234,6 @@ def load_photos_from_drive(limit=20):
         ).execute()
         return results.get('files', [])
     except Exception as e:
-        st.error(f"구글 드라이브 접근 에러: {e}")
         return []
 
 def delete_photo_from_drive(file_id):
@@ -272,7 +242,6 @@ def delete_photo_from_drive(file_id):
         svc.files().delete(fileId=file_id).execute()
         return True
     except Exception as e:
-        st.error(f"사진 삭제 실패: {e}")
         return False
 
 @st.cache_data(show_spinner=False, ttl=3600)
@@ -286,23 +255,52 @@ def get_image_bytes(file_id):
         status, done = downloader.next_chunk()
     return fh.getvalue()
 
-# --- 보안 설정 ---
-def check_password():
-    if "password_correct" not in st.session_state: st.session_state["password_correct"] = False
-    if st.session_state["password_correct"]: return True
+# ==========================================
+# 🚨 [v4.8] 2단계 접속자 게이트웨이 시스템 (문지기)
+# ==========================================
+def check_login_and_user():
+    if "password_correct" not in st.session_state: 
+        st.session_state["password_correct"] = False
+    if "current_user" not in st.session_state: 
+        st.session_state["current_user"] = None
+
+    # 1단계: 비밀번호 확인
+    if not st.session_state["password_correct"]:
+        st.markdown("<h1 style='text-align: center; color: #FF85A2; margin-top: 50px;'>♥ 수기 커플 노트</h1>", unsafe_allow_html=True)
+        pwd = st.text_input("우리 둘만의 비밀번호", type="password")
+        if st.button("사랑으로 열기 ♥"):
+            if pwd == "6146":  
+                st.session_state["password_correct"] = True
+                st.rerun()
+            else: 
+                st.error("비밀번호가 틀렸어!")
+        return False
     
-    st.markdown("<h1 style='text-align: center; color: #FF85A2;'>♥ 수기 커플 노트</h1>", unsafe_allow_html=True)
-    pwd = st.text_input("우리 둘만의 비밀번호", type="password")
-    if st.button("사랑으로 열기 ♥"):
-        if pwd == "6146":  
-            st.session_state["password_correct"] = True
-            st.rerun()
-        else: st.error("비밀번호가 틀렸어!")
-    return False
+    # 2단계: 접속자 확인 (비밀번호 통과 후)
+    if not st.session_state["current_user"]:
+        st.markdown("<h2 style='text-align: center; color: #FF85A2; margin-top: 50px;'>누가 오셨나요? 👀</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: gray;'>정확한 기록을 위해 본인을 선택해주세요!</p>", unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("👦 수기남자친구"):
+                st.session_state["current_user"] = "수기남자친구"
+                st.rerun()
+        with col2:
+            if st.button("👧 수기"):
+                st.session_state["current_user"] = "수기"
+                st.rerun()
+        return False
+        
+    return True
 
 # --- 메인 로직 시작 ---
-if check_password():
+if check_login_and_user():
     
+    # 접속자 변수 할당
+    user_name_only = st.session_state["current_user"]
+    user_icon = "👧" if user_name_only == "수기" else "👦"
+
     if "toast_msg" not in st.session_state:
         st.session_state.toast_msg = ""
     if st.session_state.toast_msg:
@@ -323,29 +321,26 @@ if check_password():
     if "photo_limit" not in st.session_state:
         st.session_state.photo_limit = 20
 
-    with st.sidebar:
-        user_type = st.radio("👤 접속자", ["수기남자친구 👦", "수기 👧"])
-        user_name_only = "수기남자친구" if "남자친구" in user_type else "수기"
-        
-        current_hour = now_kst.hour
-        is_night = current_hour >= 19 or current_hour <= 6
-        
-        if is_night:
-            bg_color = "#1A1A2E"; card_bg = "#16213E"; text_color = "#E0E0E0"
-            input_bg = "#0F3460"; border_color = "#2E3B5E"
-            accent_color = "#E94560" if user_name_only == "수기" else "#4B89FF"
-            user_icon = "👧" if user_name_only == "수기" else "👦"
+    # 📌 🌙 낮/밤 테마 및 배경색 할당
+    current_hour = now_kst.hour
+    is_night = current_hour >= 19 or current_hour <= 6
+    
+    if is_night:
+        bg_color = "#1A1A2E"; card_bg = "#16213E"; text_color = "#E0E0E0"
+        input_bg = "#0F3460"; border_color = "#2E3B5E"
+        accent_color = "#E94560" if user_name_only == "수기" else "#4B89FF"
+    else:
+        text_color = "#333333"; card_bg = "#ffffff"; input_bg = "#ffffff"; border_color = "#eeeeee"
+        if user_name_only == "수기":
+            bg_color = "#FFF5F7"; accent_color = "#FF85A2"
         else:
-            text_color = "#333333"; card_bg = "#ffffff"; input_bg = "#ffffff"; border_color = "#eeeeee"
-            if user_name_only == "수기":
-                bg_color = "#FFF5F7"; accent_color = "#FF85A2"; user_icon = "👧"
-            else:
-                bg_color = "#E3F2FD"; accent_color = "#4B89FF"; user_icon = "👦"
+            bg_color = "#E3F2FD"; accent_color = "#4B89FF"
 
     st.markdown(f"""
         <div class="custom-bg-layer" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: {bg_color}; z-index: -99999; pointer-events: none;"></div>
         """, unsafe_allow_html=True)
 
+    # 🚨 [v4.8] 쪽지함 퍼스널 컬러 CSS 추가 (rgba 10% 반투명)
     st.markdown(f"""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Gamja+Flower&display=swap');
@@ -358,25 +353,21 @@ if check_password():
             font-family: 'Material Symbols Rounded' !important;
             color: {text_color} !important;
         }}
-
         html, body, .stApp, .main, [data-testid="stAppViewContainer"], [data-testid="stAppViewBlockContainer"], [data-testid="stHeader"] {{
             background-color: transparent !important;
             background: transparent !important;
         }}
-        
         input, textarea, select, div.stTextInput > div > div > input, div.stTextArea > div > div > textarea {{
             background-color: {input_bg} !important;
             color: {text_color} !important;
             border: 1px solid {border_color} !important;
         }}
-        
         [data-testid="stSidebar"], [data-testid="stSidebar"] > div:first-child {{ 
             background-color: {card_bg} !important; 
             opacity: 1 !important;
             border-right: 1px solid {border_color} !important;
             box-shadow: 2px 0px 10px rgba(0,0,0,0.05) !important;
         }}
-        
         .card, [data-testid="stExpander"] {{ 
             background-color: {card_bg} !important; 
             border-radius: 15px; 
@@ -386,19 +377,22 @@ if check_password():
             box-shadow: 2px 2px 10px rgba(0,0,0,0.05); 
         }}
         
-        .user-boy {{ border-left: 5px solid #4B89FF; text-align: left; }}
-        .user-girl {{ border-right: 5px solid #FF85A2; text-align: right; }}
+        /* 🚨 쪽지함 시인성 강화 CSS */
+        .user-boy {{ 
+            border-left: 5px solid #4B89FF; 
+            text-align: left; 
+            background-color: rgba(75, 137, 255, 0.1) !important; 
+        }}
+        .user-girl {{ 
+            border-right: 5px solid #FF85A2; 
+            text-align: right; 
+            background-color: rgba(255, 133, 162, 0.1) !important; 
+        }}
+        
         .time-text {{ font-size: 0.8rem; color: gray !important; }}
         div.stButton > button {{ border-radius: 20px; font-weight: bold; background-color: {card_bg} !important; border: 1px solid {border_color} !important; color: {text_color} !important; }}
         [data-testid="stMetricValue"] {{ color: {accent_color} !important; }}
         </style>
-        """, unsafe_allow_html=True)
-
-    st.markdown(f"""
-        <div style="background-color: {card_bg}; padding: 12px; border-radius: 10px; border: 2px dashed #FF85A2; text-align: center; margin-bottom: 15px; box-shadow: 0px 4px 6px rgba(0,0,0,0.05);">
-            <span style="font-size: 1.1rem; font-weight: bold; color: #FF85A2;">🚨 스마트폰 접속 시 필독! 🚨</span><br>
-            <span style="color: {text_color};">화면 맨 왼쪽 위 <b>[ > ]</b> 모양 버튼을 눌러야<br>우리의 D-Day와 데이트 일정을 볼 수 있어요! 👈</span>
-        </div>
         """, unsafe_allow_html=True)
 
     col_h1, col_h2 = st.columns([0.85, 0.15])
@@ -417,7 +411,7 @@ if check_password():
             st.rerun()
 
     # ==========================================
-    # 💌 [Task 2] 매일매일 30문 30답 (블라인드 시스템 탑재)
+    # 💌 [Task 2] 매일매일 30문 30답 (블라인드)
     # ==========================================
     qna_list = [
         "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?",
@@ -463,24 +457,18 @@ if check_password():
             if user_name_only == "수기남자친구":
                 new_ans_boy = st.text_area("내 답변 작성", value=ans_boy, height=100, label_visibility="collapsed")
             else:
-                if both_answered:
-                    st.info(ans_boy)
-                elif ans_boy.strip():
-                    st.warning("🔒 수기남자친구님이 답변을 완료했어요! 수기님도 답변을 작성해야 볼 수 있어요.")
-                else:
-                    st.caption("아직 답변을 작성하지 않았어요 🤫")
+                if both_answered: st.info(ans_boy)
+                elif ans_boy.strip(): st.warning("🔒 수기남자친구님이 답변을 완료했어요! 수기님도 답변을 작성해야 볼 수 있어요.")
+                else: st.caption("아직 답변을 작성하지 않았어요 🤫")
                     
         with col2:
             st.markdown("👩 **수기님의 답변**")
             if user_name_only == "수기":
                 new_ans_girl = st.text_area("내 답변 작성", value=ans_girl, height=100, label_visibility="collapsed")
             else:
-                if both_answered:
-                    st.info(ans_girl)
-                elif ans_girl.strip():
-                    st.warning("🔒 수기님이 답변을 완료했어요! 수기남자친구님도 답변을 작성해야 볼 수 있어요.")
-                else:
-                    st.caption("아직 답변을 작성하지 않았어요 🤫")
+                if both_answered: st.info(ans_girl)
+                elif ans_girl.strip(): st.warning("🔒 수기님이 답변을 완료했어요! 수기남자친구님도 답변을 작성해야 볼 수 있어요.")
+                else: st.caption("아직 답변을 작성하지 않았어요 🤫")
             
         if st.button("내 답변 꾹 저장하기 💾"):
             st.session_state.qna_data[q_key]["hodl"] = new_ans_boy
@@ -524,7 +512,7 @@ if check_password():
                 st.rerun()
             
         st.divider()
-        if st.button("로그아웃"):
+        if st.button("로그아웃 🚪"):
             st.session_state.clear()
             st.rerun()
 
@@ -575,7 +563,6 @@ if check_password():
                 new_record = {"date": today_str, "수기남자친구_score": mood_score[st.session_state.moods["수기남자친구"]], "수기_score": mood_score[st.session_state.moods["수기"]]}
                 new_record[f"{user_name_only}_score"] = mood_score[my_mood]
                 st.session_state.mood_history.append(new_record)
-            
             save_main_data()
             st.session_state.toast_msg = f"{user_name_only}님의 기분이 업데이트 되었습니다! 💖"
             st.rerun()
@@ -687,8 +674,7 @@ if check_password():
                             img_bytes = get_image_bytes(p['id'])
                             parts = p['name'].split('_')
                             writer = parts[1] if len(parts) >= 2 else "알수없음"
-                            
-                            col.image(img_bytes, caption=f"by {writer}", use_container_width=True)
+                            col.image(img_bytes, caption=f"by {writer}")
                             
                             if col.button("🗑️ 지우기", key=f"del_img_{p['id']}"):
                                 if delete_photo_from_drive(p['id']):
