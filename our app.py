@@ -411,6 +411,9 @@ if check_login_and_user():
             st.session_state.toast_msg = "공지사항이 성공적으로 변경되었습니다! 📢"
             st.rerun()
 
+    # ==========================================
+    # 💌 [Task 2] 매일매일 30문 30답 (블라인드)
+    # ==========================================
     qna_list = [
         "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?",
         "3. 내가 가장 사랑스러워 보일 때는 언제야?", "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?",
@@ -560,7 +563,6 @@ if check_login_and_user():
                 new_record = {"date": today_str, "수기남자친구_score": mood_score[st.session_state.moods["수기남자친구"]], "수기_score": mood_score[st.session_state.moods["수기"]]}
                 new_record[f"{user_name_only}_score"] = mood_score[my_mood]
                 st.session_state.mood_history.append(new_record)
-            
             save_main_data()
             st.session_state.toast_msg = f"{user_name_only}님의 기분이 업데이트 되었습니다! 💖"
             st.rerun()
@@ -745,7 +747,7 @@ if check_login_and_user():
                     st.session_state.toast_msg = "메뉴가 삭제되었습니다."
                     st.rerun()
 
-    # 🚀 [v4.9 핵심 공사] 데이트 후기(장소/기록) 소셜 시스템 및 수정 기능 탑재
+    # 🚨 [v4.10 핵심 수술] 데이트 후기 댓글 관리(수정/삭제) 로직 추가
     with tabs[5]:
         st.subheader("📍 우리의 위시리스트")
         with st.form("w_form", clear_on_submit=True):
@@ -807,7 +809,7 @@ if check_login_and_user():
                 st.session_state.reviews.insert(0, {
                     "name": r_name, "link": r_link, "cat": r_cat, "rating": r_rating, 
                     "comment": r_comment, "photo_url": "", "date": str(r_date_input), "by": user_name_only,
-                    "comments": [] # 🚨 v4.9 신규 구조: 댓글 방 생성
+                    "comments": [] 
                 })
                 save_specific_large_data(sheet_review, st.session_state.reviews)
                 st.session_state.toast_msg = "정성스러운 데이트 후기가 등록되었습니다! 📝"
@@ -817,12 +819,11 @@ if check_login_and_user():
         st.subheader("📚 우리의 데이트 기록장")
         
         for i, r in enumerate(st.session_state.reviews):
-            # 🚨 [TDD 방어] 예전 후기 데이터에 '댓글 방'이 없으면 에러가 나지 않도록 즉석에서 만들어 줌
             if "comments" not in r:
                 r["comments"] = []
 
             with st.container():
-                # 1. 예쁜 카드 형태로 리뷰 렌더링
+                # 1. 리뷰 원본 렌더링
                 link_html = f" | <a href='{r.get('link', '#')}' target='_blank'>🔗 지도에서 보기</a>" if r.get('link') else ""
                 st.markdown(f"""
                     <div class="card" style="margin-bottom: 5px;">
@@ -835,11 +836,30 @@ if check_login_and_user():
                     </div>
                     """, unsafe_allow_html=True)
 
-                # 2. 댓글(Comments) 렌더링
-                for c in r["comments"]:
+                # 2. 개별 댓글 렌더링 & [v4.10] 수정/삭제 아코디언 이식
+                for c_idx, c in enumerate(r["comments"]):
                     st.markdown(f"<div class='review-comment'><b>{c['user']}</b>: {c['text']} <span class='time-text'>({c.get('time', '')})</span></div>", unsafe_allow_html=True)
+                    
+                    with st.expander(f"💬 '{c['user']}'님의 댓글 수정 / 삭제", expanded=False):
+                        edit_c_text = st.text_input("댓글 내용 수정", value=c['text'], key=f"edit_c_txt_{i}_{c_idx}")
+                        col_c_edit, col_c_del = st.columns(2)
+                        
+                        if col_c_edit.button("수정 완료 💾", key=f"btn_c_edit_{i}_{c_idx}"):
+                            if edit_c_text.strip():
+                                c['text'] = edit_c_text
+                                save_specific_large_data(sheet_review, st.session_state.reviews)
+                                st.session_state.toast_msg = "댓글이 완벽하게 수정되었습니다! ✨"
+                                st.rerun()
+                            else:
+                                st.warning("빈칸으로 수정할 수 없어요!")
+                                
+                        if col_c_del.button("댓글 삭제 🗑️", key=f"btn_c_del_{i}_{c_idx}"):
+                            r["comments"].pop(c_idx)
+                            save_specific_large_data(sheet_review, st.session_state.reviews)
+                            st.session_state.toast_msg = "댓글이 삭제되었습니다. 🗑️"
+                            st.rerun()
                 
-                # 3. 새로운 댓글 달기 입력창
+                # 3. 새로운 댓글 쓰기
                 col_c1, col_c2 = st.columns([0.8, 0.2])
                 with col_c1:
                     new_comment = st.text_input("댓글 달기", key=f"comment_input_{i}", label_visibility="collapsed", placeholder="나도 여기 좋았어! 😆")
@@ -850,9 +870,8 @@ if check_login_and_user():
                         st.session_state.toast_msg = "댓글이 등록되었습니다! 💬"
                         st.rerun()
 
-                # 4. 리뷰 수정 및 삭제 아코디언 (타임머신 에디터)
-                with st.expander("⚙️ 이 후기 수정 / 삭제하기"):
-                    # 과거 글자의 날짜 파싱 (안전 장치)
+                # 4. 리뷰 원본 수정/삭제
+                with st.expander("⚙️ 이 후기 원본 수정 / 삭제하기"):
                     try:
                         parsed_date = datetime.datetime.strptime(r['date'], "%Y-%m-%d").date()
                     except:
@@ -868,7 +887,7 @@ if check_login_and_user():
                         r['name'] = edit_r_name
                         r['comment'] = edit_r_comment
                         save_specific_large_data(sheet_review, st.session_state.reviews)
-                        st.session_state.toast_msg = "후기 내용이 완벽하게 수정되었습니다! ✨"
+                        st.session_state.toast_msg = "후기 원본이 수정되었습니다! ✨"
                         st.rerun()
                     if col_e2.button("삭제하기 🗑️", key=f"btn_r_del_{i}"):
                         st.session_state.reviews.pop(i)
