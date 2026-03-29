@@ -747,7 +747,7 @@ if check_login_and_user():
                     st.session_state.toast_msg = "메뉴가 삭제되었습니다."
                     st.rerun()
 
-    # 🚨 [v4.10 핵심 수술] 데이트 후기 댓글 관리(수정/삭제) 로직 추가
+    # 🚨 [v4.11 핵심 수술] 작성자 본인만 댓글 및 원본 글을 관리할 수 있는 권한 통제 장치 탑재
     with tabs[5]:
         st.subheader("📍 우리의 위시리스트")
         with st.form("w_form", clear_on_submit=True):
@@ -836,28 +836,30 @@ if check_login_and_user():
                     </div>
                     """, unsafe_allow_html=True)
 
-                # 2. 개별 댓글 렌더링 & [v4.10] 수정/삭제 아코디언 이식
+                # 2. 개별 댓글 렌더링
                 for c_idx, c in enumerate(r["comments"]):
                     st.markdown(f"<div class='review-comment'><b>{c['user']}</b>: {c['text']} <span class='time-text'>({c.get('time', '')})</span></div>", unsafe_allow_html=True)
                     
-                    with st.expander(f"💬 '{c['user']}'님의 댓글 수정 / 삭제", expanded=False):
-                        edit_c_text = st.text_input("댓글 내용 수정", value=c['text'], key=f"edit_c_txt_{i}_{c_idx}")
-                        col_c_edit, col_c_del = st.columns(2)
-                        
-                        if col_c_edit.button("수정 완료 💾", key=f"btn_c_edit_{i}_{c_idx}"):
-                            if edit_c_text.strip():
-                                c['text'] = edit_c_text
+                    # 🚨 [권한 방어벽] 접속자와 댓글 작성자가 동일할 때만 아코디언 버튼 활성화
+                    if c.get('user') == user_name_only:
+                        with st.expander(f"💬 내 댓글 수정 / 삭제", expanded=False):
+                            edit_c_text = st.text_input("댓글 내용 수정", value=c['text'], key=f"edit_c_txt_{i}_{c_idx}")
+                            col_c_edit, col_c_del = st.columns(2)
+                            
+                            if col_c_edit.button("수정 완료 💾", key=f"btn_c_edit_{i}_{c_idx}"):
+                                if edit_c_text.strip():
+                                    c['text'] = edit_c_text
+                                    save_specific_large_data(sheet_review, st.session_state.reviews)
+                                    st.session_state.toast_msg = "내 댓글이 완벽하게 수정되었습니다! ✨"
+                                    st.rerun()
+                                else:
+                                    st.warning("빈칸으로 수정할 수 없어요!")
+                                    
+                            if col_c_del.button("댓글 삭제 🗑️", key=f"btn_c_del_{i}_{c_idx}"):
+                                r["comments"].pop(c_idx)
                                 save_specific_large_data(sheet_review, st.session_state.reviews)
-                                st.session_state.toast_msg = "댓글이 완벽하게 수정되었습니다! ✨"
+                                st.session_state.toast_msg = "내 댓글이 삭제되었습니다. 🗑️"
                                 st.rerun()
-                            else:
-                                st.warning("빈칸으로 수정할 수 없어요!")
-                                
-                        if col_c_del.button("댓글 삭제 🗑️", key=f"btn_c_del_{i}_{c_idx}"):
-                            r["comments"].pop(c_idx)
-                            save_specific_large_data(sheet_review, st.session_state.reviews)
-                            st.session_state.toast_msg = "댓글이 삭제되었습니다. 🗑️"
-                            st.rerun()
                 
                 # 3. 새로운 댓글 쓰기
                 col_c1, col_c2 = st.columns([0.8, 0.2])
@@ -871,29 +873,31 @@ if check_login_and_user():
                         st.rerun()
 
                 # 4. 리뷰 원본 수정/삭제
-                with st.expander("⚙️ 이 후기 원본 수정 / 삭제하기"):
-                    try:
-                        parsed_date = datetime.datetime.strptime(r['date'], "%Y-%m-%d").date()
-                    except:
-                        parsed_date = now_kst.date()
+                # 🚨 [권한 방어벽] 자신이 작성한 원본 후기만 수정할 수 있도록 잠금
+                if r.get('by') == user_name_only:
+                    with st.expander("⚙️ 내 후기 원본 수정 / 삭제하기"):
+                        try:
+                            parsed_date = datetime.datetime.strptime(r['date'], "%Y-%m-%d").date()
+                        except:
+                            parsed_date = now_kst.date()
 
-                    edit_r_date = st.date_input("방문 날짜 수정", value=parsed_date, key=f"edit_r_date_{i}")
-                    edit_r_name = st.text_input("장소명 수정", value=r['name'], key=f"edit_r_name_{i}")
-                    edit_r_comment = st.text_area("후기 내용 수정", value=r['comment'], key=f"edit_r_comment_{i}")
-                    
-                    col_e1, col_e2 = st.columns(2)
-                    if col_e1.button("수정 완료 💾", key=f"btn_r_edit_{i}"):
-                        r['date'] = str(edit_r_date)
-                        r['name'] = edit_r_name
-                        r['comment'] = edit_r_comment
-                        save_specific_large_data(sheet_review, st.session_state.reviews)
-                        st.session_state.toast_msg = "후기 원본이 수정되었습니다! ✨"
-                        st.rerun()
-                    if col_e2.button("삭제하기 🗑️", key=f"btn_r_del_{i}"):
-                        st.session_state.reviews.pop(i)
-                        save_specific_large_data(sheet_review, st.session_state.reviews)
-                        st.session_state.toast_msg = "후기가 목록에서 삭제되었습니다."
-                        st.rerun()
+                        edit_r_date = st.date_input("방문 날짜 수정", value=parsed_date, key=f"edit_r_date_{i}")
+                        edit_r_name = st.text_input("장소명 수정", value=r['name'], key=f"edit_r_name_{i}")
+                        edit_r_comment = st.text_area("후기 내용 수정", value=r['comment'], key=f"edit_r_comment_{i}")
+                        
+                        col_e1, col_e2 = st.columns(2)
+                        if col_e1.button("수정 완료 💾", key=f"btn_r_edit_{i}"):
+                            r['date'] = str(edit_r_date)
+                            r['name'] = edit_r_name
+                            r['comment'] = edit_r_comment
+                            save_specific_large_data(sheet_review, st.session_state.reviews)
+                            st.session_state.toast_msg = "후기 원본이 수정되었습니다! ✨"
+                            st.rerun()
+                        if col_e2.button("삭제하기 🗑️", key=f"btn_r_del_{i}"):
+                            st.session_state.reviews.pop(i)
+                            save_specific_large_data(sheet_review, st.session_state.reviews)
+                            st.session_state.toast_msg = "후기가 목록에서 삭제되었습니다."
+                            st.rerun()
                 st.write("") # 리뷰 간의 여백
 
     with tabs[6]:
