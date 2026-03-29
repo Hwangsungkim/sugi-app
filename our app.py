@@ -22,7 +22,7 @@ def show_cherry_blossoms():
     st.markdown("""
         <style>
         .blossom {
-            color: rgba(255, 183, 197, 0.6); /* 투명도를 주어 수채화처럼 연하게 */
+            color: rgba(255, 183, 197, 0.6); 
             font-size: 1.2em;
             font-family: Arial, sans-serif;
             text-shadow: 0 0 3px rgba(255, 183, 197, 0.4);
@@ -31,7 +31,7 @@ def show_cherry_blossoms():
             z-index: 9999;
             user-select: none;
             cursor: default;
-            pointer-events: none; /* 클릭 통과 */
+            pointer-events: none; 
             animation-name: fall, shake;
             animation-duration: 10s, 3s;
             animation-timing-function: linear, ease-in-out;
@@ -256,7 +256,7 @@ def get_image_bytes(file_id):
     return fh.getvalue()
 
 # ==========================================
-# 🚨 [v4.8] 2단계 접속자 게이트웨이 시스템 (문지기)
+# 🚨 [v4.8] 2단계 접속자 게이트웨이 시스템
 # ==========================================
 def check_login_and_user():
     if "password_correct" not in st.session_state: 
@@ -264,7 +264,6 @@ def check_login_and_user():
     if "current_user" not in st.session_state: 
         st.session_state["current_user"] = None
 
-    # 1단계: 비밀번호 확인
     if not st.session_state["password_correct"]:
         st.markdown("<h1 style='text-align: center; color: #FF85A2; margin-top: 50px;'>♥ 수기 커플 노트</h1>", unsafe_allow_html=True)
         pwd = st.text_input("우리 둘만의 비밀번호", type="password")
@@ -276,7 +275,6 @@ def check_login_and_user():
                 st.error("비밀번호가 틀렸어!")
         return False
     
-    # 2단계: 접속자 확인 (비밀번호 통과 후)
     if not st.session_state["current_user"]:
         st.markdown("<h2 style='text-align: center; color: #FF85A2; margin-top: 50px;'>누가 오셨나요? 👀</h2>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; color: gray;'>정확한 기록을 위해 본인을 선택해주세요!</p>", unsafe_allow_html=True)
@@ -297,7 +295,6 @@ def check_login_and_user():
 # --- 메인 로직 시작 ---
 if check_login_and_user():
     
-    # 접속자 변수 할당
     user_name_only = st.session_state["current_user"]
     user_icon = "👧" if user_name_only == "수기" else "👦"
 
@@ -321,7 +318,6 @@ if check_login_and_user():
     if "photo_limit" not in st.session_state:
         st.session_state.photo_limit = 20
 
-    # 📌 🌙 낮/밤 테마 및 배경색 할당
     current_hour = now_kst.hour
     is_night = current_hour >= 19 or current_hour <= 6
     
@@ -340,7 +336,6 @@ if check_login_and_user():
         <div class="custom-bg-layer" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: {bg_color}; z-index: -99999; pointer-events: none;"></div>
         """, unsafe_allow_html=True)
 
-    # 🚨 [v4.8] 쪽지함 퍼스널 컬러 CSS 추가 (rgba 10% 반투명)
     st.markdown(f"""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Gamja+Flower&display=swap');
@@ -377,7 +372,6 @@ if check_login_and_user():
             box-shadow: 2px 2px 10px rgba(0,0,0,0.05); 
         }}
         
-        /* 🚨 쪽지함 시인성 강화 CSS */
         .user-boy {{ 
             border-left: 5px solid #4B89FF; 
             text-align: left; 
@@ -387,6 +381,13 @@ if check_login_and_user():
             border-right: 5px solid #FF85A2; 
             text-align: right; 
             background-color: rgba(255, 133, 162, 0.1) !important; 
+        }}
+        .review-comment {{
+            background-color: rgba(128,128,128,0.1);
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-top: 5px;
+            font-size: 0.9em;
         }}
         
         .time-text {{ font-size: 0.8rem; color: gray !important; }}
@@ -410,9 +411,6 @@ if check_login_and_user():
             st.session_state.toast_msg = "공지사항이 성공적으로 변경되었습니다! 📢"
             st.rerun()
 
-    # ==========================================
-    # 💌 [Task 2] 매일매일 30문 30답 (블라인드)
-    # ==========================================
     qna_list = [
         "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?",
         "3. 내가 가장 사랑스러워 보일 때는 언제야?", "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?",
@@ -477,7 +475,6 @@ if check_login_and_user():
             st.session_state.toast_msg = "소중한 답변이 영구 저장되었습니다! ✨"
             st.rerun()
 
-    # 📌 사이드바 하단부
     with st.sidebar:
         st.markdown(f"""
             <div style="background-color: rgba(128,128,128,0.05); padding: 10px; border-radius: 10px; border-left: 5px solid {accent_color}; margin-bottom: 15px;">
@@ -563,6 +560,7 @@ if check_login_and_user():
                 new_record = {"date": today_str, "수기남자친구_score": mood_score[st.session_state.moods["수기남자친구"]], "수기_score": mood_score[st.session_state.moods["수기"]]}
                 new_record[f"{user_name_only}_score"] = mood_score[my_mood]
                 st.session_state.mood_history.append(new_record)
+            
             save_main_data()
             st.session_state.toast_msg = f"{user_name_only}님의 기분이 업데이트 되었습니다! 💖"
             st.rerun()
@@ -747,6 +745,7 @@ if check_login_and_user():
                     st.session_state.toast_msg = "메뉴가 삭제되었습니다."
                     st.rerun()
 
+    # 🚀 [v4.9 핵심 공사] 데이트 후기(장소/기록) 소셜 시스템 및 수정 기능 탑재
     with tabs[5]:
         st.subheader("📍 우리의 위시리스트")
         with st.form("w_form", clear_on_submit=True):
@@ -796,32 +795,87 @@ if check_login_and_user():
                         st.rerun()
         
         st.divider()
-        st.subheader("📝 데이트 후기")
+        st.subheader("📝 데이트 후기 작성")
         with st.form("r_form", clear_on_submit=True):
-            r_name = st.text_input("장소명")
-            r_link = st.text_input("장소 지도 링크 (URL - 선택사항)")
-            r_cat = st.selectbox("종류", ["음식점", "카페", "공원", "기타"])
-            r_rating = st.selectbox("별점", ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"])
-            r_comment = st.text_area("후기")
-            if st.form_submit_button("후기 등록") and r_name:
+            r_date_input = st.date_input("방문 날짜 🗓️", value=now_kst.date())
+            r_name = st.text_input("장소명 📍")
+            r_link = st.text_input("장소 지도 링크 (URL - 선택사항) 🔗")
+            r_cat = st.selectbox("종류 🏷️", ["음식점", "카페", "공원", "기타"])
+            r_rating = st.selectbox("별점 ⭐", ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"])
+            r_comment = st.text_area("후기 내용 📝")
+            if st.form_submit_button("후기 등록 완료!") and r_name:
                 st.session_state.reviews.insert(0, {
                     "name": r_name, "link": r_link, "cat": r_cat, "rating": r_rating, 
-                    "comment": r_comment, "photo_url": "", "date": today_str, "by": user_name_only
+                    "comment": r_comment, "photo_url": "", "date": str(r_date_input), "by": user_name_only,
+                    "comments": [] # 🚨 v4.9 신규 구조: 댓글 방 생성
                 })
                 save_specific_large_data(sheet_review, st.session_state.reviews)
                 st.session_state.toast_msg = "정성스러운 데이트 후기가 등록되었습니다! 📝"
                 st.rerun()
         
-        for r in st.session_state.reviews:
-            link_html = f"<br><a href='{r.get('link', '#')}' target='_blank'>🔗 지도에서 보기</a>" if r.get('link') else ""
-            st.markdown(f"""
-                <div class="card">
-                    <span style="background-color:rgba(128,128,128,0.2); padding:2px 5px; border-radius:5px; font-size:0.8rem; color:{text_color};">{r['cat']}</span>
-                    <b>{r['name']}</b> {r['rating']} ({r['date']})
-                    {link_html} <br><br>
-                    <p style="margin: 0; color:{text_color};">{r['comment']}</p>
-                </div>
-                """, unsafe_allow_html=True)
+        st.divider()
+        st.subheader("📚 우리의 데이트 기록장")
+        
+        for i, r in enumerate(st.session_state.reviews):
+            # 🚨 [TDD 방어] 예전 후기 데이터에 '댓글 방'이 없으면 에러가 나지 않도록 즉석에서 만들어 줌
+            if "comments" not in r:
+                r["comments"] = []
+
+            with st.container():
+                # 1. 예쁜 카드 형태로 리뷰 렌더링
+                link_html = f" | <a href='{r.get('link', '#')}' target='_blank'>🔗 지도에서 보기</a>" if r.get('link') else ""
+                st.markdown(f"""
+                    <div class="card" style="margin-bottom: 5px;">
+                        <span style="background-color:rgba(128,128,128,0.2); padding:2px 5px; border-radius:5px; font-size:0.8rem; color:{text_color};">{r['cat']}</span>
+                        <span style="font-size: 0.8rem; color: gray;"> {r['date']} by {r['by']}</span>
+                        <br>
+                        <b>{r['name']}</b> {r['rating']} {link_html}
+                        <br><br>
+                        <p style="margin: 0; color:{text_color};">{r['comment']}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                # 2. 댓글(Comments) 렌더링
+                for c in r["comments"]:
+                    st.markdown(f"<div class='review-comment'><b>{c['user']}</b>: {c['text']} <span class='time-text'>({c.get('time', '')})</span></div>", unsafe_allow_html=True)
+                
+                # 3. 새로운 댓글 달기 입력창
+                col_c1, col_c2 = st.columns([0.8, 0.2])
+                with col_c1:
+                    new_comment = st.text_input("댓글 달기", key=f"comment_input_{i}", label_visibility="collapsed", placeholder="나도 여기 좋았어! 😆")
+                with col_c2:
+                    if st.button("💬 달기", key=f"btn_comment_{i}") and new_comment:
+                        r["comments"].append({"user": user_name_only, "text": new_comment, "time": current_time_str})
+                        save_specific_large_data(sheet_review, st.session_state.reviews)
+                        st.session_state.toast_msg = "댓글이 등록되었습니다! 💬"
+                        st.rerun()
+
+                # 4. 리뷰 수정 및 삭제 아코디언 (타임머신 에디터)
+                with st.expander("⚙️ 이 후기 수정 / 삭제하기"):
+                    # 과거 글자의 날짜 파싱 (안전 장치)
+                    try:
+                        parsed_date = datetime.datetime.strptime(r['date'], "%Y-%m-%d").date()
+                    except:
+                        parsed_date = now_kst.date()
+
+                    edit_r_date = st.date_input("방문 날짜 수정", value=parsed_date, key=f"edit_r_date_{i}")
+                    edit_r_name = st.text_input("장소명 수정", value=r['name'], key=f"edit_r_name_{i}")
+                    edit_r_comment = st.text_area("후기 내용 수정", value=r['comment'], key=f"edit_r_comment_{i}")
+                    
+                    col_e1, col_e2 = st.columns(2)
+                    if col_e1.button("수정 완료 💾", key=f"btn_r_edit_{i}"):
+                        r['date'] = str(edit_r_date)
+                        r['name'] = edit_r_name
+                        r['comment'] = edit_r_comment
+                        save_specific_large_data(sheet_review, st.session_state.reviews)
+                        st.session_state.toast_msg = "후기 내용이 완벽하게 수정되었습니다! ✨"
+                        st.rerun()
+                    if col_e2.button("삭제하기 🗑️", key=f"btn_r_del_{i}"):
+                        st.session_state.reviews.pop(i)
+                        save_specific_large_data(sheet_review, st.session_state.reviews)
+                        st.session_state.toast_msg = "후기가 목록에서 삭제되었습니다."
+                        st.rerun()
+                st.write("") # 리뷰 간의 여백
 
     with tabs[6]:
         st.subheader("🎁 미래로 보내는 타임캡슐")
