@@ -620,7 +620,7 @@ if check_password():
                             
                             col.image(img_bytes, caption=f"by {writer}", use_container_width=True)
                             
-                            # 🚨 에러 원인이었던 이중 괄호 "))" 1글자 완벽 삭제 완료!
+                            # 🚨 오타 1글자 완전 적출! 완벽 수정 완료!
                             if col.button("🗑️ 지우기", key=f"del_img_{p['id']}"):
                                 if delete_photo_from_drive(p['id']):
                                     st.session_state.toast_msg = "선택한 추억이 삭제되었습니다. 🗑️"
