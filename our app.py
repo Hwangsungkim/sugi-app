@@ -364,7 +364,6 @@ if check_login_and_user():
 
     # 1. 데이트 (문답 ➔ 데이트일정 ➔ 기분)
     with tabs[0]:
-        # 🚨 [NameError 픽스] q_index -> q_idx 로 철저히 통일
         qna_list = [
             "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?",
             "3. 내가 가장 사랑스러워 보일 때는 언제야?", "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?",
@@ -745,11 +744,10 @@ if check_login_and_user():
                     st.warning(f"이 캡슐은 **{cap.get('open_date', '')} 자정(KST)**에 열쇠가 풀립니다! 🗝️")
                     st.write(f"**📝 작성자:** {cap.get('by', '')}")
 
-    # 8. 🌸 텔레파시 (스코프 충돌 완전 분리)
+    # 8. 🌸 [v5.0.5] 텔레파시 (스니킹 알림 기능 추가)
     with tabs[7]:
         st.subheader("🌸 오늘의 텔레파시 밸런스 게임")
         questions = [["평생 여름", "평생 겨울"], ["카레맛 똥", "똥맛 카레"], ["찍먹", "부먹"], ["강아지", "고양이"]]
-        # 🚨 [NameError 방어] 변수명 tele_idx로 분리
         tele_idx = now_kst.toordinal() % len(questions)
         q_pair = questions[tele_idx]
         
@@ -771,10 +769,21 @@ if check_login_and_user():
         st.divider()
         b_ans = st.session_state.tele_data[today_str].get("hodl")
         g_ans = st.session_state.tele_data[today_str].get("sugi")
+        
+        # 🚨 상대방의 선택 여부를 알려주는 세분화된 알림 로직
         if b_ans and g_ans:
-            if b_ans == g_ans: st.balloons(); st.success(f"🎊 찌찌뽕! 두 분 다 **[{b_ans}]**를 선택하셨어요! 운명인가봐요 ❤️")
-            else: st.info(f"오호! 수기남자친구님은 **[{b_ans}]**, 수기님은 **[{g_ans}]**를 고르셨군요! (다름의 미학 😉)")
-        else: st.warning("🔒 두 분 모두 선택해야 텔레파시 결과를 볼 수 있어요!")
+            if b_ans == g_ans: 
+                st.balloons()
+                st.success(f"🎊 찌찌뽕! 두 분 다 **[{b_ans}]**를 선택하셨어요! 운명인가봐요 ❤️")
+            else: 
+                st.info(f"오호! 수기남자친구님은 **[{b_ans}]**, 수기님은 **[{g_ans}]**를 고르셨군요! (다름의 미학 😉)")
+        else: 
+            if b_ans: 
+                st.warning("🔒 수기남자친구님은 선택을 완료했어요! 수기님의 선택을 기다리고 있어요 ⏳")
+            elif g_ans: 
+                st.warning("🔒 수기님은 선택을 완료했어요! 수기남자친구님의 선택을 기다리고 있어요 ⏳")
+            else: 
+                st.caption("아직 아무도 선택하지 않았어요! 먼저 텔레파시를 보내보세요 📡")
 
     # 9. 🎵 주크박스
     with tabs[8]:
