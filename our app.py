@@ -39,12 +39,25 @@ def show_cherry_blossoms():
 
 show_cherry_blossoms()
 
-# --- 🚀 구글 인증 및 서비스 설정 ---
+# ==========================================
+# 🍎 아이폰(iOS) 전용 홈 화면 아이콘 강제 주입
+# ==========================================
+components.html("""
+    <script>
+        const link = window.parent.document.createElement('link');
+        link.rel = 'apple-touch-icon';
+        link.href = 'https://cdn-icons-png.flaticon.com/512/833/833472.png'; 
+        window.parent.document.head.appendChild(link);
+    </script>
+""", height=0, width=0)
+
+# --- 🌐 한국 시간(KST) 설정 ---
 KST = pytz.timezone('Asia/Seoul')
 now_kst = datetime.datetime.now(KST)
 today_str = str(now_kst.date())
 current_time_str = now_kst.strftime("%H:%M")
 
+# --- 🚀 구글 인증 및 서비스 설정 ---
 @st.cache_resource
 def get_credentials():
     scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
@@ -79,6 +92,17 @@ def extract_youtube_id(url):
     pattern = r'(?:v=|\/|be\/|embed\/)([0-9A-Za-z_-]{11})'
     match = re.search(pattern, url)
     return match.group(1) if match else None
+
+if "DRIVE_FOLDER_ID" in st.secrets:
+    DRIVE_FOLDER_ID = st.secrets["DRIVE_FOLDER_ID"]
+elif "google_auth" in st.secrets and "DRIVE_FOLDER_ID" in st.secrets["google_auth"]:
+    DRIVE_FOLDER_ID = st.secrets["google_auth"]["DRIVE_FOLDER_ID"]
+else:
+    DRIVE_FOLDER_ID = ""
+
+def get_drive_service():
+    creds = get_credentials()
+    return build('drive', 'v3', credentials=creds, cache_discovery=False)
 
 # ==========================================
 # ⚡️ 데이터 로드 및 아토믹 세이브
@@ -147,27 +171,21 @@ def save_main_data():
 # ==========================================
 # 📸 드라이브 연동 (v4.6 아키텍처)
 # ==========================================
-def get_drive_service():
-    creds = get_credentials()
-    return build('drive', 'v3', credentials=creds, cache_discovery=False)
-
 def upload_photo_to_drive(file_bytes, filename, mime_type):
-    folder_id = st.secrets.get("DRIVE_FOLDER_ID") or st.secrets.get("google_auth", {}).get("DRIVE_FOLDER_ID")
-    if not folder_id: return None
+    if not DRIVE_FOLDER_ID: return None
     try:
         svc = get_drive_service()
-        file_metadata = {'name': filename, 'parents': [folder_id]}
+        file_metadata = {'name': filename, 'parents': [DRIVE_FOLDER_ID]}
         media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype=mime_type, resumable=True)
         file = svc.files().create(body=file_metadata, media_body=media, fields='id').execute()
         return file.get('id')
     except: return None
 
 def load_photos_from_drive(limit=20):
-    folder_id = st.secrets.get("DRIVE_FOLDER_ID") or st.secrets.get("google_auth", {}).get("DRIVE_FOLDER_ID")
-    if not folder_id: return []
+    if not DRIVE_FOLDER_ID: return []
     try:
         svc = get_drive_service()
-        results = svc.files().list(q=f"'{folder_id}' in parents and trashed=false", pageSize=limit, fields="files(id, name)", orderBy="createdTime desc").execute()
+        results = svc.files().list(q=f"'{DRIVE_FOLDER_ID}' in parents and trashed=false", pageSize=limit, fields="files(id, name)", orderBy="createdTime desc").execute()
         return results.get('files', [])
     except: return []
 
@@ -176,8 +194,7 @@ def delete_photo_from_drive(file_id):
         svc = get_drive_service() 
         svc.files().delete(fileId=file_id).execute()
         return True
-    except Exception as e:
-        return False
+    except: return False
 
 @st.cache_data(show_spinner=False, ttl=3600)
 def get_image_bytes(file_id):
@@ -302,7 +319,7 @@ if check_login_and_user():
         st.divider()
         if st.button("로그아웃 🚪"): st.session_state.clear(); st.rerun()
 
-    # --- 🚨 [v5.0.3 CSS 핵심 픽스] span 태그 제외로 arrow_right 에러 완벽 해결 ---
+    # --- CSS 주입 (span 제외 유지) ---
     st.markdown(f"""
         <div class="custom-bg-layer" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: {bg_color}; z-index: -99999; pointer-events: none;"></div>
         <style>
@@ -347,6 +364,7 @@ if check_login_and_user():
 
     # 1. 데이트 (문답 ➔ 데이트일정 ➔ 기분)
     with tabs[0]:
+        # 🚨 [NameError 픽스] q_index -> q_idx 로 철저히 통일
         qna_list = [
             "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?",
             "3. 내가 가장 사랑스러워 보일 때는 언제야?", "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?",
@@ -371,7 +389,7 @@ if check_login_and_user():
         if "qna_data" not in st.session_state: st.session_state.qna_data = {}
         if q_key not in st.session_state.qna_data: st.session_state.qna_data[q_key] = {"hodl": "", "sugi": ""}
 
-        with st.expander(f"💌 오늘의 문답 (D-{30 - q_index}일 남음)", expanded=True):
+        with st.expander(f"💌 오늘의 문답 (D-{30 - q_idx}일 남음)", expanded=True):
             st.subheader(today_question)
             ans_boy = st.session_state.qna_data[q_key].get("hodl", "")
             ans_girl = st.session_state.qna_data[q_key].get("sugi", "")
@@ -727,12 +745,13 @@ if check_login_and_user():
                     st.warning(f"이 캡슐은 **{cap.get('open_date', '')} 자정(KST)**에 열쇠가 풀립니다! 🗝️")
                     st.write(f"**📝 작성자:** {cap.get('by', '')}")
 
-    # 8. 🌸 텔레파시
+    # 8. 🌸 텔레파시 (스코프 충돌 완전 분리)
     with tabs[7]:
         st.subheader("🌸 오늘의 텔레파시 밸런스 게임")
         questions = [["평생 여름", "평생 겨울"], ["카레맛 똥", "똥맛 카레"], ["찍먹", "부먹"], ["강아지", "고양이"]]
-        q_idx = now_kst.toordinal() % len(questions)
-        q_pair = questions[q_idx]
+        # 🚨 [NameError 방어] 변수명 tele_idx로 분리
+        tele_idx = now_kst.toordinal() % len(questions)
+        q_pair = questions[tele_idx]
         
         st.session_state.tele_data.setdefault(today_str, {"hodl": None, "sugi": None})
         
@@ -765,7 +784,7 @@ if check_login_and_user():
             if st.form_submit_button("노래 신청하기 📻") and song_link:
                 st.session_state.jukebox_data.insert(0, {"date": today_str, "user": user_name_only, "url": song_link})
                 save_data_to_cell("jukebox", st.session_state.jukebox_data)
-                st.session_state.toast_msg = "주크박에 노래가 등록되었습니다! 🎧"; st.rerun()
+                st.session_state.toast_msg = "주크박스에 노래가 등록되었습니다! 🎧"; st.rerun()
         
         if st.session_state.jukebox_data:
             latest = st.session_state.jukebox_data[0]
