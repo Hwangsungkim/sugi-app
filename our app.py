@@ -302,12 +302,12 @@ if check_login_and_user():
         st.divider()
         if st.button("로그아웃 🚪"): st.session_state.clear(); st.rerun()
 
-    # --- CSS 주입 ---
+    # --- 🚨 [v5.0.3 CSS 핵심 픽스] span 태그 제외로 arrow_right 에러 완벽 해결 ---
     st.markdown(f"""
         <div class="custom-bg-layer" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: {bg_color}; z-index: -99999; pointer-events: none;"></div>
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Gamja+Flower&display=swap');
-        html, body, p, h1, h2, h3, h4, h5, h6, span, label, button, input, textarea, select, div[data-testid="stMetricValue"], .stMarkdown, .stText {{
+        html, body, p, h1, h2, h3, h4, h5, h6, label, button, input, textarea, select, div[data-testid="stMetricValue"], .stMarkdown, .stText {{
             font-family: 'Gamja Flower', sans-serif !important; color: {text_color} !important;
         }}
         .stApp {{ background-color: transparent !important; background: transparent !important; }}
@@ -341,13 +341,12 @@ if check_login_and_user():
             st.session_state.toast_msg = "공지사항이 성공적으로 변경되었습니다! 📢"; st.rerun()
 
     # ==========================================
-    # 탭 구성 
+    # 9개 탭 구성
     # ==========================================
     tabs = st.tabs(["💕 데이트", "💌 쪽지함", "📸 추억 저장소", "⏳ 타임라인", "🎡 만능 룰렛", "📍 장소/기록", "🎁 타임캡슐", "🌸 텔레파시", "🎵 주크박스"])
 
     # 1. 데이트 (문답 ➔ 데이트일정 ➔ 기분)
     with tabs[0]:
-        # 🚨 [UI 재배치] 문답을 최상단으로 이동
         qna_list = [
             "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?",
             "3. 내가 가장 사랑스러워 보일 때는 언제야?", "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?",
@@ -372,7 +371,7 @@ if check_login_and_user():
         if "qna_data" not in st.session_state: st.session_state.qna_data = {}
         if q_key not in st.session_state.qna_data: st.session_state.qna_data[q_key] = {"hodl": "", "sugi": ""}
 
-        with st.expander(f"💌 오늘의 문답 (D-{30 - q_idx}일 남음)", expanded=True):
+        with st.expander(f"💌 오늘의 문답 (D-{30 - q_index}일 남음)", expanded=True):
             st.subheader(today_question)
             ans_boy = st.session_state.qna_data[q_key].get("hodl", "")
             ans_girl = st.session_state.qna_data[q_key].get("sugi", "")
@@ -583,7 +582,7 @@ if check_login_and_user():
                 if col_m2.button("삭제", key=f"btn_m_del_{i}"):
                     st.session_state.menu_list.pop(i); save_main_data(); st.rerun()
 
-    # 6. 📍 장소/기록 (위시리스트 + 리뷰 소셜 갤러리 - 빙고 완전 철거 및 롤백)
+    # 6. 장소/기록 
     with tabs[5]:
         st.subheader("📍 우리의 위시리스트")
         with st.form("w_form", clear_on_submit=True):
@@ -700,7 +699,7 @@ if check_login_and_user():
                             st.session_state.toast_msg = "후기가 목록에서 삭제되었습니다."; st.rerun()
                 st.write("") 
 
-    # 7. 🎁 타임캡슐
+    # 7. 타임캡슐
     with tabs[6]:
         st.subheader("🎁 미래로 보내는 편지")
         with st.form("capsule_form", clear_on_submit=True):
@@ -728,7 +727,7 @@ if check_login_and_user():
                     st.warning(f"이 캡슐은 **{cap.get('open_date', '')} 자정(KST)**에 열쇠가 풀립니다! 🗝️")
                     st.write(f"**📝 작성자:** {cap.get('by', '')}")
 
-    # 8. 🌸 텔레파시 밸런스 게임
+    # 8. 🌸 텔레파시
     with tabs[7]:
         st.subheader("🌸 오늘의 텔레파시 밸런스 게임")
         questions = [["평생 여름", "평생 겨울"], ["카레맛 똥", "똥맛 카레"], ["찍먹", "부먹"], ["강아지", "고양이"]]
@@ -766,7 +765,7 @@ if check_login_and_user():
             if st.form_submit_button("노래 신청하기 📻") and song_link:
                 st.session_state.jukebox_data.insert(0, {"date": today_str, "user": user_name_only, "url": song_link})
                 save_data_to_cell("jukebox", st.session_state.jukebox_data)
-                st.session_state.toast_msg = "주크박스에 노래가 등록되었습니다! 🎧"; st.rerun()
+                st.session_state.toast_msg = "주크박에 노래가 등록되었습니다! 🎧"; st.rerun()
         
         if st.session_state.jukebox_data:
             latest = st.session_state.jukebox_data[0]
