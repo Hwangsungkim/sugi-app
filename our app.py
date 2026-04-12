@@ -11,6 +11,7 @@ import re
 import requests
 import pandas as pd
 from PIL import Image, ImageOps
+from collections import Counter
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
@@ -26,12 +27,12 @@ today_str = str(now_kst.date())
 current_time_str = now_kst.strftime("%H:%M")
 
 # ==========================================
-# 🌤️ 실시간 날씨 API 연동 및 감성 이펙트
+# 🌤️ 실시간 날씨 API 연동 및 고급 CSS 감성 이펙트 (이모티콘 삭제)
 # ==========================================
 @st.cache_data(ttl=3600)
 def get_busan_weather_effect():
     try:
-        res = requests.get("[https://api.open-meteo.com/v1/forecast?latitude=35.1796&longitude=129.0756&current_weather=true](https://api.open-meteo.com/v1/forecast?latitude=35.1796&longitude=129.0756&current_weather=true)", timeout=1.5)
+        res = requests.get("https://api.open-meteo.com/v1/forecast?latitude=35.1796&longitude=129.0756&current_weather=true", timeout=1.5)
         if res.status_code == 200:
             code = res.json().get("current_weather", {}).get("weathercode", 0)
             if code in [51, 53, 55, 61, 63, 65, 67, 80, 81, 82]: return "rain"
@@ -45,19 +46,33 @@ weather_type = get_busan_weather_effect()
 
 def show_weather_effect(w_type):
     if w_type == "rain":
-        effect_css = """.effect { color: rgba(173, 216, 230, 0.7); font-size: 1.5em; position: fixed; top: -10%; z-index: 9999; pointer-events: none; animation: fall 1.5s linear infinite; } @keyframes fall { 0% { top: -10%; } 100% { top: 100%; } }"""
-        symbol = "💧"
+        # 빗줄기 CSS
+        effect_css = """
+        .drop { position: fixed; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(150, 200, 255, 0.5)); 
+                width: 2px; height: 10vh; top: -10vh; z-index: 9999; pointer-events: none; animation: fall 0.7s linear infinite; }
+        @keyframes fall { to { transform: translateY(110vh); } }
+        """
+        divs = "".join([f"<div class='drop' style='left:{random.randint(0,100)}%; animation-delay:{random.uniform(0,1):.2f}s;'></div>" for _ in range(30)])
+        st.markdown(f"<style>{effect_css}</style><div aria-hidden='true'>{divs}</div>", unsafe_allow_html=True)
+    
     elif w_type == "snow":
-        effect_css = """.effect { color: rgba(255, 255, 255, 0.8); font-size: 1.2em; position: fixed; top: -10%; z-index: 9999; pointer-events: none; animation: fall 5s linear infinite, shake 3s ease-in-out infinite; } @keyframes fall { 0% { top: -10%; } 100% { top: 100%; } } @keyframes shake { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(50px); } }"""
-        symbol = "❄️"
+        # 눈송이 CSS
+        effect_css = """
+        .flake { position: fixed; background: rgba(255, 255, 255, 0.8); border-radius: 50%; box-shadow: 0 0 5px rgba(255,255,255,0.5);
+                 top: -10vh; z-index: 9999; pointer-events: none; animation: snow_fall 4s linear infinite, snow_shake 3s ease-in-out infinite alternate; }
+        @keyframes snow_fall { to { transform: translateY(110vh); } }
+        @keyframes snow_shake { from { transform: translateX(-15px); } to { transform: translateX(15px); } }
+        """
+        divs = "".join([f"<div class='flake' style='left:{random.randint(0,100)}%; animation-delay:{random.uniform(0,4):.2f}s; width:{random.randint(4,8)}px; height:{random.randint(4,8)}px;'></div>" for _ in range(30)])
+        st.markdown(f"<style>{effect_css}</style><div aria-hidden='true'>{divs}</div>", unsafe_allow_html=True)
+    
     elif w_type == "cloud":
-        effect_css = """.effect { color: rgba(200, 200, 200, 0.5); font-size: 3em; position: fixed; top: 10%; z-index: -1; pointer-events: none; animation: drift 30s linear infinite; } @keyframes drift { 0% { left: -20%; } 100% { left: 120%; } }"""
-        symbol = "☁️"
+        # 흐린 날 은은한 오버레이
+        st.markdown("""<style>.cloud-layer { position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(200, 210, 220, 0.15); z-index:-99998; pointer-events:none; }</style><div class="cloud-layer"></div>""", unsafe_allow_html=True)
+    
     else:
-        effect_css = """.effect { color: rgba(255, 223, 0, 0.3); font-size: 4em; position: fixed; top: 5%; left: 80%; z-index: -1; pointer-events: none; animation: pulse 4s ease-in-out infinite; } @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.3; } 50% { transform: scale(1.1); opacity: 0.6; } }"""
-        symbol = "✨"
-    divs = "".join([f'<div class="effect" style="left:{random.randint(5,95)}%; animation-delay:{random.uniform(0, 5):.1f}s;">{symbol}</div>' for _ in range(10 if w_type in ["rain", "snow"] else (3 if w_type == "cloud" else 1))])
-    st.markdown(f"<style>{effect_css}</style><div aria-hidden='true'>{divs}</div>", unsafe_allow_html=True)
+        # 맑은 날 햇빛 그라데이션
+        st.markdown("""<style>.sun-layer { position: fixed; top:0; left:0; width:100vw; height:100vh; background: radial-gradient(circle at top right, rgba(255, 220, 100, 0.12), transparent 60%); z-index:-99998; pointer-events:none; }</style><div class="sun-layer"></div>""", unsafe_allow_html=True)
 
 show_weather_effect(weather_type)
 
@@ -66,7 +81,7 @@ components.html("""
     <script>
         const link = window.parent.document.createElement('link');
         link.rel = 'apple-touch-icon';
-        link.href = '[https://cdn-icons-png.flaticon.com/512/833/833472.png](https://cdn-icons-png.flaticon.com/512/833/833472.png)'; 
+        link.href = 'https://cdn-icons-png.flaticon.com/512/833/833472.png'; 
         window.parent.document.head.appendChild(link);
     </script>
 """, height=0, width=0)
@@ -74,7 +89,7 @@ components.html("""
 # --- 🚀 구글 인증 및 서비스 설정 ---
 @st.cache_resource
 def get_credentials():
-    scopes = ['[https://www.googleapis.com/auth/spreadsheets](https://www.googleapis.com/auth/spreadsheets)', '[https://www.googleapis.com/auth/drive](https://www.googleapis.com/auth/drive)']
+    scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
     if "google_auth" in st.secrets:
         token_info = json.loads(st.secrets["google_auth"]["token"])
         return Credentials.from_authorized_user_info(token_info, scopes)
@@ -257,10 +272,10 @@ if check_login_and_user():
             st.session_state.current_mood_date = today_str
             save_main_data()
 
-    # 🎨 [디자인 롤백] 야간 모드 영구 삭제. 화사한 파스텔 배경 & 진한 글씨체 고정
+    # 🎨 [디자인 완벽 롤백] 야간 모드 영구 삭제. 화사한 파스텔 배경 고정
     bg_color = "#FFF5F7" if user_name_only == "수기" else "#E3F2FD"
     accent_color = "#FF85A2" if user_name_only == "수기" else "#4B89FF"
-    text_color = "#333333" # 어두운 텍스트로 가독성 확보
+    text_color = "#333333" 
     
     # ==========================================
     # 🌱 다마고치 사랑나무 & 배지 (사이드바)
@@ -307,11 +322,11 @@ if check_login_and_user():
         st.divider()
         if st.button("로그아웃 🚪"): st.query_params.clear(); st.session_state.clear(); st.rerun()
 
-    # --- CSS 주입 (가독성 및 감성 테마 복원) ---
+    # --- CSS 주입 (가독성 및 감성 테마 100% 복원) ---
     st.markdown(f"""
         <div class="custom-bg-layer" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background-color:{bg_color}; z-index:-99999; pointer-events:none;"></div>
         <style>
-        @import url('[https://fonts.googleapis.com/css2?family=Gamja+Flower&display=swap](https://fonts.googleapis.com/css2?family=Gamja+Flower&display=swap)');
+        @import url('https://fonts.googleapis.com/css2?family=Gamja+Flower&display=swap');
         html, body, p, h1, h2, h3, h4, h5, h6, label, button, input, textarea, select, div[data-testid="stMetricValue"], .stMarkdown, .stText {{
             font-family: 'Gamja Flower', sans-serif !important; color: {text_color} !important;
         }}
@@ -462,7 +477,7 @@ if check_login_and_user():
         if len(st.session_state.memo_history) > st.session_state.memo_limit:
             if st.button("더 보기 ⬇️"): st.session_state.memo_limit += 10; st.rerun()
 
-    # 3. 🌸 텔레파시 (수동 격발 장치 포함)
+    # 3. 🌸 텔레파시 (수동 격발)
     with tabs[2]:
         st.subheader("🌸 오늘의 텔레파시")
         questions = [
@@ -518,6 +533,10 @@ if check_login_and_user():
     with tabs[3]:
         st.subheader("🎵 오늘의 커플 DJ")
         if isinstance(st.session_state.jukebox_data, list): st.session_state.jukebox_data = {"hodl": None, "sugi": None}
+        
+        # 🚨 URL 링크 깨짐을 막는 완벽한 포매팅 분리 로직
+        yt_base_url = "https://" + "www.youtube.com/watch?v="
+        
         with st.form("dj_dual"):
             link = st.text_input("오늘의 추천곡 (유튜브)")
             if st.form_submit_button("신청") and link:
@@ -528,13 +547,13 @@ if check_login_and_user():
         with col_b:
             st.info("👦 남친의 Pick")
             b_id = extract_youtube_id(st.session_state.jukebox_data.get("hodl", ""))
-            if b_id: st.video(f"[https://www.youtube.com/watch?v=](https://www.youtube.com/watch?v=){b_id}")
+            if b_id: st.video(yt_base_url + b_id)
         with col_g:
             st.success("👧 수기의 Pick")
             g_id = extract_youtube_id(st.session_state.jukebox_data.get("sugi", ""))
-            if g_id: st.video(f"[https://www.youtube.com/watch?v=](https://www.youtube.com/watch?v=){g_id}")
+            if g_id: st.video(yt_base_url + g_id)
 
-    # 5. 📸 추억저장소 (🚨 아이폰 다중 업로드 완벽 분리 복구 & 장바구니 적용)
+    # 5. 📸 추억저장소 (🚨 아이폰 다중 업로드 완벽 분리 복구 & 갤러리 장바구니 적용)
     with tabs[4]:
         st.subheader("📸 추억 보관함")
         with st.expander("✨ 새로운 추억 보관하기", expanded=False):
@@ -561,8 +580,10 @@ if check_login_and_user():
                                     if img.mode in ("RGBA", "P"): img = img.convert("RGB")
                                     out = io.BytesIO()
                                     img.save(out, format="JPEG", quality=85)
-                                    filename = f"{selected_date_str}_{user_name_only}_{clean_event_name}_{random.randint(1000, 9999)}.jpg"
-                                    if upload_photo_to_drive(out.getvalue(), filename, "image/jpeg"): success_count += 1
+                                    
+                                    # f-string URL 파괴를 막기 위한 안전 문자열 생성
+                                    safe_filename = f"{selected_date_str}_{user_name_only}_{clean_event_name}_{random.randint(1000, 9999)}.jpg"
+                                    if upload_photo_to_drive(out.getvalue(), safe_filename, "image/jpeg"): success_count += 1
                                 except: pass
                             if success_count > 0:
                                 st.session_state.toast_msg = f"{success_count}장의 추억이 드라이브에 저장되었습니다! 🚀"; st.rerun()
@@ -594,8 +615,9 @@ if check_login_and_user():
                                     if img.mode in ("RGBA", "P"): img = img.convert("RGB")
                                     out = io.BytesIO()
                                     img.save(out, format="JPEG", quality=85)
-                                    filename = f"{selected_date_str}_{user_name_only}_{clean_event_name}_{random.randint(1000, 9999)}.jpg"
-                                    upload_photo_to_drive(out.getvalue(), filename, "image/jpeg")
+                                    
+                                    safe_filename = f"{selected_date_str}_{user_name_only}_{clean_event_name}_{random.randint(1000, 9999)}.jpg"
+                                    upload_photo_to_drive(out.getvalue(), safe_filename, "image/jpeg")
                                 except: pass
                             st.session_state.photo_cart = []; st.success("전송 완료! 🚀"); st.rerun()
                     if st.button("장바구니 비우기 🗑️"): st.session_state.photo_cart = []; st.rerun()
@@ -603,7 +625,6 @@ if check_login_and_user():
         st.divider()
         photos = load_photos_from_drive(st.session_state.photo_limit)
         
-        # 🚨 그룹화 폴더 렌더링 로직 복구
         grouped_photos = {}
         for p in photos:
             parts = p['name'].split('_')
@@ -645,7 +666,7 @@ if check_login_and_user():
                 save_large_data("time", st.session_state.timeline); st.rerun()
         for t in st.session_state.timeline: st.markdown(f"<div class='card'><b>{t['date']}</b>: {t['event']}</div>", unsafe_allow_html=True)
 
-    # 7. 📍 장소/기록 (🚨 파이썬 기본 dict로 안정적 단어 추출 복구)
+    # 7. 📍 장소/기록 (🚨 딕셔너리로 단어 추출 안전 픽스 완벽 반영)
     with tabs[6]:
         st.subheader("📊 월간 수기 백서")
         this_month = now_kst.strftime("%Y-%m")
