@@ -93,7 +93,8 @@ def extract_youtube_id(url):
     match = re.search(r'(?:v=|\/|be\/|embed\/)([0-9A-Za-z_-]{11})', url)
     return match.group(1) if match else None
 
-DRIVE_FOLDER_ID = st.secrets.get("DRIVE_FOLDER_ID", "")
+# 🚨 [사진 증발 원인 완벽 차단] 드라이브 폴더 ID 경로 3중 파싱 (절대 건드리지 않음)
+DRIVE_FOLDER_ID = st.secrets.get("DRIVE_FOLDER_ID") or st.secrets.get("google_auth", {}).get("DRIVE_FOLDER_ID") or ""
 
 def get_drive_service():
     return build('drive', 'v3', credentials=get_credentials(), cache_discovery=False)
@@ -235,10 +236,18 @@ if check_login_and_user():
     total_act = len(st.session_state.memo_history) + len(st.session_state.timeline) + len(st.session_state.reviews)
     level, tree_icon = ("풍성한 나무", "🍎") if total_act >= 70 else (("아기 나무", "🌳") if total_act >= 30 else (("새싹", "🌿") if total_act >= 10 else ("씨앗", "🌱")))
     
+    # 🚨 배지 시스템
+    badges = []
+    if len(st.session_state.memo_history) >= 10: badges.append("📝 편지왕")
+    if len(st.session_state.reviews) >= 5: badges.append("🍽️ 미슐랭")
+    if len(st.session_state.date_schedules) >= 5: badges.append("🗓️ 파워J")
+    badge_html = "".join([f"<span style='background:rgba(255,255,255,0.4); padding:4px 8px; border-radius:10px; font-size:0.8em; margin:2px; display:inline-block;'>{b}</span>" for b in badges])
+
     with st.sidebar:
         st.markdown(f"""<div style="background:rgba(255,255,255,0.4); padding:15px; border-radius:15px; border:2px solid {accent_color}; text-align:center;">
                 <h1 style="margin:0;">{tree_icon}</h1><h4 style="margin:5px 0;">사랑나무: {level}</h4>
-                <p style="font-size:0.8em; color:gray; margin:0;">포인트: {total_act} XP</p></div>""", unsafe_allow_html=True)
+                <p style="font-size:0.8em; color:gray; margin:0;">포인트: {total_act} XP</p>
+                <div style="margin-top:10px;">{badge_html}</div></div>""", unsafe_allow_html=True)
         start_date = datetime.date(2026, 1, 1); days_passed = (now_kst.date() - start_date).days + 1
         st.metric(label="🌸 우리의 D-Day", value=f"D + {days_passed}일")
         st.divider()
@@ -295,6 +304,7 @@ if check_login_and_user():
             with st.expander("열어보기"):
                 for p in past_records: st.info(f"[{p['date']}] {p['user']}: {p['content']}")
 
+        # 🚨 80개 문답 + 남/여 색상 구분 완벽 복구
         qna_list = [
             "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?", "3. 내가 가장 사랑스러워 보일 때는 언제야?", "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?", "5. 지금 당장 훌쩍 떠난다면 같이 가고 싶은 여행지는?",
             "6. 지금까지 우리의 가장 완벽했던 데이트는 언제였어?", "7. 우리의 첫 키스(뽀뽀) 때 어떤 기분이었어?", "8. 내가 해준 음식 중 최고의 메뉴는?", "9. 서로의 연락처 저장명과 그렇게 정한 이유는 뭐야?", "10. 화났을 때 내 기분을 100% 풀어주는 최고의 방법은?",
@@ -438,7 +448,7 @@ if check_login_and_user():
             if g_id: st.video(yt_safe + g_id)
             else: st.info("아직 신청한 곡이 없어요!")
 
-    # 5. 📸 추억저장소
+    # 5. 📸 추억저장소 🚨 [사진 폴더 로직 100% 복구] 🚨
     with tabs[4]:
         st.subheader("📸 추억 보관함")
         with st.expander("✨ 새로운 추억 보관하기"):
@@ -575,7 +585,7 @@ if check_login_and_user():
             else:
                 st.warning(f"🔒 [잠김] {cap.get('title')} ({cap.get('open_date')} 개봉 예정)")
 
-    # 9. 🎡 만능 룰렛 🚨 [메뉴 리스트 연동 시스템 완벽 복구] 🚨
+    # 9. 🎡 만능 룰렛 🚨 [메뉴 리스트 연동형 완전체 복구] 🚨
     with tabs[8]:
         st.subheader("🎡 결정장애 해결사 (메뉴 룰렛)")
         
