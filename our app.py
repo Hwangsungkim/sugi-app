@@ -26,7 +26,7 @@ today_str = str(now_kst.date())
 current_time_str = now_kst.strftime("%H:%M")
 
 # ==========================================
-# 🌤️ [v5.0] 부산 실시간 날씨 API 연동 및 감성 이펙트
+# 🌤️ 부산 실시간 날씨 API 연동 및 감성 이펙트
 # ==========================================
 @st.cache_data(ttl=3600)
 def get_busan_weather_effect():
@@ -63,9 +63,6 @@ def show_weather_effect(w_type):
 
 show_weather_effect(weather_type)
 
-# ==========================================
-# 🍎 아이폰(iOS) 홈 화면 아이콘 강제 주입
-# ==========================================
 components.html("""
     <script>
         const link = window.parent.document.createElement('link');
@@ -90,11 +87,9 @@ def get_sheets():
     if not creds: return None
     client = gspread.authorize(creds)
     doc = client.open('couple_app_data')
-    
     def safe_worksheet(name):
         try: return doc.worksheet(name)
         except: return None
-
     return {
         "main": safe_worksheet('시트1'), "memo": safe_worksheet('쪽지함'), "time": safe_worksheet('타임라인'),
         "date": safe_worksheet('데이트일정'), "wish": safe_worksheet('위시리스트'), "review": safe_worksheet('데이트후기'),
@@ -105,18 +100,14 @@ def get_sheets():
 services = get_sheets()
 if not services: st.error("🚨 구글 연동 실패! Secrets 설정을 확인해주세요.")
 
-# --- 🚨 핵심 유틸리티: 유튜브 ID 추출기 ---
 def extract_youtube_id(url):
     pattern = r'(?:v=|\/|be\/|embed\/)([0-9A-Za-z_-]{11})'
     match = re.search(pattern, url)
     return match.group(1) if match else None
 
-if "DRIVE_FOLDER_ID" in st.secrets:
-    DRIVE_FOLDER_ID = st.secrets["DRIVE_FOLDER_ID"]
-elif "google_auth" in st.secrets and "DRIVE_FOLDER_ID" in st.secrets["google_auth"]:
-    DRIVE_FOLDER_ID = st.secrets["google_auth"]["DRIVE_FOLDER_ID"]
-else:
-    DRIVE_FOLDER_ID = ""
+if "DRIVE_FOLDER_ID" in st.secrets: DRIVE_FOLDER_ID = st.secrets["DRIVE_FOLDER_ID"]
+elif "google_auth" in st.secrets and "DRIVE_FOLDER_ID" in st.secrets["google_auth"]: DRIVE_FOLDER_ID = st.secrets["google_auth"]["DRIVE_FOLDER_ID"]
+else: DRIVE_FOLDER_ID = ""
 
 def get_drive_service():
     creds = get_credentials()
@@ -126,10 +117,9 @@ def get_drive_service():
 # ⚡️ 데이터 로드 및 아토믹 세이브
 # ==========================================
 def load_data():
-    try:
-        val = services["main"].acell('A1').value
-        main_data = json.loads(val) if val else {}
-    except: main_data = {}
+    try: val = services["main"].acell('A1').value
+    except: val = None
+    main_data = json.loads(val) if val else {}
 
     def get_large_data(sheet_obj):
         if not sheet_obj: return []
@@ -164,8 +154,7 @@ def load_data():
     }
 
 def save_data_to_cell(sheet_key, data):
-    if services and services.get(sheet_key):
-        services[sheet_key].update_acell('A1', json.dumps(data))
+    if services and services.get(sheet_key): services[sheet_key].update_acell('A1', json.dumps(data))
 
 def save_large_data(sheet_key, data_list):
     if services and services.get(sheet_key):
@@ -177,12 +166,8 @@ def save_large_data(sheet_key, data_list):
 
 def save_main_data():
     main_data = {
-        "notice": st.session_state.notice,
-        "promises": st.session_state.promises,
-        "moods": st.session_state.moods,
-        "mood_history": st.session_state.mood_history,
-        "current_mood_date": st.session_state.current_mood_date,
-        "menu_list": st.session_state.menu_list,
+        "notice": st.session_state.notice, "promises": st.session_state.promises, "moods": st.session_state.moods,
+        "mood_history": st.session_state.mood_history, "current_mood_date": st.session_state.current_mood_date, "menu_list": st.session_state.menu_list,
     }
     save_data_to_cell("main", main_data)
 
@@ -224,7 +209,7 @@ def get_image_bytes(file_id):
     return fh.getvalue()
 
 # ==========================================
-# 🚨 로그인 시스템 (원클릭 접속)
+# 🚨 [v5.0.Final] URL 쿼리 파라미터 자동 로그인 시스템
 # ==========================================
 def validate_password():
     if st.session_state.pwd_input == "6146":
@@ -233,6 +218,14 @@ def validate_password():
         st.error("비밀번호가 틀렸어! ❤️")
 
 def check_login_and_user():
+    # 1. URL에 자동 로그인 쿠키(?auth=hodl)가 있는지 확인
+    if "auth" in st.query_params:
+        auth_val = st.query_params["auth"]
+        if auth_val in ["hodl", "sugi"]:
+            st.session_state["password_correct"] = True
+            st.session_state["current_user"] = "수기남자친구" if auth_val == "hodl" else "수기"
+            return True
+
     if "password_correct" not in st.session_state: st.session_state["password_correct"] = False
     if "current_user" not in st.session_state: st.session_state["current_user"] = None
 
@@ -246,9 +239,15 @@ def check_login_and_user():
         st.markdown("<p style='text-align: center; color: gray;'>정확한 기록을 위해 본인을 선택해주세요!</p>", unsafe_allow_html=True)
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("👦 수기남자친구"): st.session_state["current_user"] = "수기남자친구"; st.rerun()
+            if st.button("👦 수기남자친구"): 
+                st.session_state["current_user"] = "수기남자친구"
+                st.query_params["auth"] = "hodl" # 🚨 URL에 자동 로그인 프리패스 발급
+                st.rerun()
         with col2:
-            if st.button("👧 수기"): st.session_state["current_user"] = "수기"; st.rerun()
+            if st.button("👧 수기"): 
+                st.session_state["current_user"] = "수기"
+                st.query_params["auth"] = "sugi" # 🚨 URL에 자동 로그인 프리패스 발급
+                st.rerun()
         return False
     return True
 
@@ -345,7 +344,10 @@ if check_login_and_user():
                 st.rerun()
             
         st.divider()
-        if st.button("로그아웃 🚪"): st.session_state.clear(); st.rerun()
+        if st.button("로그아웃 🚪"): 
+            st.query_params.clear() # 로그아웃 시 쿼리 파라미터 날리기
+            st.session_state.clear()
+            st.rerun()
 
     # --- CSS 주입 (span 제외 유지) ---
     st.markdown(f"""
@@ -386,7 +388,7 @@ if check_login_and_user():
             st.session_state.toast_msg = "공지사항이 성공적으로 변경되었습니다! 📢"; st.rerun()
 
     # ==========================================
-    # 🚨 [v5.0.6 UX 재정렬] 탭 순서 동선 최적화 (요청하신 순서 100% 반영)
+    # 9개 탭 구성 (동선 완벽 최적화 순서 적용)
     # 0:데이트 ➔ 1:쪽지함 ➔ 2:텔레파시 ➔ 3:주크박스 ➔ 4:추억저장소 ➔ 5:타임라인 ➔ 6:장소/기록 ➔ 7:타임캡슐 ➔ 8:만능룰렛
     # ==========================================
     tabs = st.tabs(["💕 데이트", "💌 쪽지함", "🌸 텔레파시", "🎵 주크박스", "📸 추억저장소", "⏳ 타임라인", "📍 장소/기록", "🎁 타임캡슐", "🎡 만능룰렛"])
@@ -452,7 +454,6 @@ if check_login_and_user():
                 st.session_state.toast_msg = "소중한 답변이 영구 저장되었습니다! ✨"; st.rerun()
 
         st.divider()
-
         st.subheader("📈 우리의 기분 차트")
         if len(st.session_state.mood_history) >= 2:
             df = pd.DataFrame(st.session_state.mood_history)
@@ -548,7 +549,7 @@ if check_login_and_user():
                 st.session_state.memo_limit += 10; st.rerun()
 
     # ------------------
-    # 3. 🌸 텔레파시
+    # 3. 🌸 텔레파시 (🚨 무한 폭죽 차단: 수동 확인 버튼 탑재)
     # ------------------
     with tabs[2]:
         st.subheader("🌸 오늘의 텔레파시 밸런스 게임")
@@ -601,15 +602,14 @@ if check_login_and_user():
         b_ans = st.session_state.tele_data[today_str].get("hodl")
         g_ans = st.session_state.tele_data[today_str].get("sugi")
         
-        # 🚨 단 한 번만 터지는 풍선 로직 (세션 자물쇠)
         if b_ans and g_ans:
-            if b_ans == g_ans: 
-                if "tele_balloon_popped" not in st.session_state:
+            # 🚨 텔레파시 결과 수동 확인 버튼 (무한 폭죽 원천 차단)
+            if st.button("🎁 텔레파시 결과 확인하기!", use_container_width=True):
+                if b_ans == g_ans: 
                     st.balloons()
-                    st.session_state["tele_balloon_popped"] = True
-                st.success(f"🎊 찌찌뽕! 두 분 다 **[{b_ans}]**를 선택하셨어요! 운명인가봐요 ❤️")
-            else: 
-                st.info(f"오호! 수기남자친구님은 **[{b_ans}]**, 수기님은 **[{g_ans}]**를 고르셨군요! (다름의 미학 😉)")
+                    st.success(f"🎊 찌찌뽕! 두 분 다 **[{b_ans}]**를 선택하셨어요! 운명인가봐요 ❤️")
+                else: 
+                    st.info(f"오호! 수기남자친구님은 **[{b_ans}]**, 수기님은 **[{g_ans}]**를 고르셨군요! (다름의 미학 😉)")
         else: 
             if b_ans: st.warning("🔒 수기남자친구님은 선택을 완료했어요! 수기님의 선택을 기다리고 있어요 ⏳")
             elif g_ans: st.warning("🔒 수기님은 선택을 완료했어요! 수기남자친구님의 선택을 기다리고 있어요 ⏳")
@@ -654,17 +654,18 @@ if check_login_and_user():
             else: st.caption("아직 신청곡이 없습니다.")
 
     # ------------------
-    # 5. 📸 추억 저장소 (🚨 폼 증발 방지: 단일 업로드 분리)
+    # 5. 📸 추억 저장소 (🚨 안드로이드 카메라 버그 완벽 우회)
     # ------------------
     with tabs[4]:
         st.subheader("📸 2TB 우리들의 추억 저장소")
         with st.expander("✨ 새로운 추억 보관하기", expanded=False):
-            upload_mode = st.radio("어떻게 올릴까요?", ["🖼️ 앨범에서 여러 장 고르기", "📸 카메라로 지금 찍기 (안드로이드 권장)"], horizontal=True)
+            # 🚨 안드로이드 증발 현상을 원천 차단하는 채널 분리형 UI
+            upload_mode = st.radio("어떻게 올릴까요? (갤럭시는 1장씩 올리기를 권장해요!)", ["🖼️ 앨범에서 여러 장 (아이폰 권장)", "📸 한 장씩 확실하게 올리기 (갤럭시/안드로이드 필수)"], horizontal=True)
             
             if "여러 장" in upload_mode:
                 img_files = st.file_uploader("사진들을 선택해주세요", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
             else:
-                img_file = st.file_uploader("카메라로 찰칵! (1장씩 올라갑니다)", type=["jpg", "png", "jpeg"], accept_multiple_files=False)
+                img_file = st.file_uploader("카메라로 찰칵! (1장씩 안전하게 올라갑니다)", type=["jpg", "png", "jpeg"], accept_multiple_files=False)
                 img_files = [img_file] if img_file else []
 
             col_e1, col_e2 = st.columns([0.4, 0.6])
