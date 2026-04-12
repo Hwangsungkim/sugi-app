@@ -347,7 +347,7 @@ if check_login_and_user():
         st.divider()
         if st.button("로그아웃 🚪"): st.session_state.clear(); st.rerun()
 
-    # --- CSS 주입 ---
+    # --- CSS 주입 (span 제외 유지) ---
     st.markdown(f"""
         <div class="custom-bg-layer" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: {bg_color}; z-index: -99999; pointer-events: none;"></div>
         <style>
@@ -386,7 +386,8 @@ if check_login_and_user():
             st.session_state.toast_msg = "공지사항이 성공적으로 변경되었습니다! 📢"; st.rerun()
 
     # ==========================================
-    # 탭 구성
+    # 🚨 [v5.0.6 UX 재정렬] 탭 순서 동선 최적화 (요청하신 순서 100% 반영)
+    # 0:데이트 ➔ 1:쪽지함 ➔ 2:텔레파시 ➔ 3:주크박스 ➔ 4:추억저장소 ➔ 5:타임라인 ➔ 6:장소/기록 ➔ 7:타임캡슐 ➔ 8:만능룰렛
     # ==========================================
     tabs = st.tabs(["💕 데이트", "💌 쪽지함", "🌸 텔레파시", "🎵 주크박스", "📸 추억저장소", "⏳ 타임라인", "📍 장소/기록", "🎁 타임캡슐", "🎡 만능룰렛"])
 
@@ -600,9 +601,12 @@ if check_login_and_user():
         b_ans = st.session_state.tele_data[today_str].get("hodl")
         g_ans = st.session_state.tele_data[today_str].get("sugi")
         
+        # 🚨 단 한 번만 터지는 풍선 로직 (세션 자물쇠)
         if b_ans and g_ans:
             if b_ans == g_ans: 
-                st.balloons()
+                if "tele_balloon_popped" not in st.session_state:
+                    st.balloons()
+                    st.session_state["tele_balloon_popped"] = True
                 st.success(f"🎊 찌찌뽕! 두 분 다 **[{b_ans}]**를 선택하셨어요! 운명인가봐요 ❤️")
             else: 
                 st.info(f"오호! 수기남자친구님은 **[{b_ans}]**, 수기님은 **[{g_ans}]**를 고르셨군요! (다름의 미학 😉)")
@@ -650,12 +654,11 @@ if check_login_and_user():
             else: st.caption("아직 신청곡이 없습니다.")
 
     # ------------------
-    # 5. 📸 추억 저장소 (🚨 안드로이드 카메라 버그 완벽 방어: 단일 업로드 분리)
+    # 5. 📸 추억 저장소 (🚨 폼 증발 방지: 단일 업로드 분리)
     # ------------------
     with tabs[4]:
         st.subheader("📸 2TB 우리들의 추억 저장소")
         with st.expander("✨ 새로운 추억 보관하기", expanded=False):
-            # 🚨 모바일 브라우저 카메라 튕김 우회 UI
             upload_mode = st.radio("어떻게 올릴까요?", ["🖼️ 앨범에서 여러 장 고르기", "📸 카메라로 지금 찍기 (안드로이드 권장)"], horizontal=True)
             
             if "여러 장" in upload_mode:
@@ -678,7 +681,6 @@ if check_login_and_user():
                         
                         for img_f in img_files:
                             try:
-                                # PIL 엔진 가동 (사진 압축 및 회전 보정)
                                 img = Image.open(img_f)
                                 img = ImageOps.exif_transpose(img)
                                 img.thumbnail((1920, 1920), Image.Resampling.LANCZOS)
