@@ -26,7 +26,7 @@ today_str = str(now_kst.date())
 current_time_str = now_kst.strftime("%H:%M")
 
 # ==========================================
-# 🌤️ 실시간 날씨 (가장 심플하게 이모티콘 1개만 흘러가는 로직)
+# 🌤️ 실시간 날씨 (단 1개의 이모티콘만 깔끔하게 흘러가는 로직 - 유지)
 # ==========================================
 @st.cache_data(ttl=3600)
 def get_busan_weather():
@@ -45,21 +45,20 @@ weather_type = get_busan_weather()
 
 def show_weather_effect(w_type):
     if w_type == "cloud":
-        effect_css = ".weather-icon { position: fixed; top: 10vh; left: -20vw; font-size: 6em; opacity: 0.7; z-index: 9999; pointer-events: none; animation: drift 35s linear infinite; } @keyframes drift { to { transform: translateX(120vw); } }"
+        effect_css = ".weather-icon { position: fixed; top: 15vh; left: -20vw; font-size: 6em; opacity: 0.6; z-index: -99998; pointer-events: none; animation: cloud_drift 30s linear infinite; } @keyframes cloud_drift { to { transform: translateX(120vw); } }"
         divs = "<div class='weather-icon'>☁️</div>"
     elif w_type == "sun":
-        effect_css = ".weather-icon { position: fixed; top: 5vh; left: -20vw; font-size: 5em; opacity: 0.6; z-index: 9999; pointer-events: none; animation: drift_spin 40s linear infinite; } @keyframes drift_spin { to { transform: translateX(120vw) rotate(18deg); } }"
-        divs = "<div class='weather-icon'>✨</div>"
+        effect_css = ".weather-icon { position: fixed; top: 10vh; left: -20vw; font-size: 6em; opacity: 0.5; z-index: -99998; pointer-events: none; animation: sun_drift 40s linear infinite; } @keyframes sun_drift { to { transform: translateX(120vw) rotate(180deg); } }"
+        divs = "<div class='weather-icon'>☀️</div>"
     elif w_type == "rain":
-        effect_css = ".weather-icon { position: fixed; top: -10vh; left: 40vw; font-size: 4em; opacity: 0.7; z-index: 9999; pointer-events: none; animation: fall 3s linear infinite; } @keyframes fall { to { transform: translateY(110vh); } }"
-        divs = "<div class='weather-icon'>💧</div>"
+        effect_css = ".weather-icon { position: fixed; top: -10vh; left: 50vw; font-size: 5em; opacity: 0.5; z-index: -99998; pointer-events: none; animation: rain_fall 2s linear infinite; } @keyframes rain_fall { to { transform: translateY(110vh); } }"
+        divs = "<div class='weather-icon'>🌧️</div>"
     else:
-        effect_css = ".weather-icon { position: fixed; top: -10vh; left: 50vw; font-size: 4em; opacity: 0.8; z-index: 9999; pointer-events: none; animation: fall_snow 6s linear infinite; } @keyframes fall_snow { to { transform: translateY(110vh) translateX(30px); } }"
+        effect_css = ".weather-icon { position: fixed; top: -10vh; left: 50vw; font-size: 4em; opacity: 0.6; z-index: -99998; pointer-events: none; animation: snow_fall 5s linear infinite; } @keyframes snow_fall { to { transform: translateY(110vh) translateX(30px); } }"
         divs = "<div class='weather-icon'>❄️</div>"
-    
     st.markdown(f"<style>{effect_css}</style><div aria-hidden='true'>{divs}</div>", unsafe_allow_html=True)
 
-# --- 🍎 아이폰 전용 홈 화면 아이콘 ---
+# --- 🍎 아이폰 홈 화면 아이콘 ---
 components.html("""<script>const link = window.parent.document.createElement('link'); link.rel = 'apple-touch-icon'; link.href = 'https://cdn-icons-png.flaticon.com/512/833/833472.png'; window.parent.document.head.appendChild(link);</script>""", height=0, width=0)
 
 # --- 🚀 구글 인증 및 서비스 설정 ---
@@ -79,12 +78,7 @@ def get_sheets():
     def safe_ws(name):
         try: return doc.worksheet(name)
         except: return None
-    return {
-        "main": safe_ws('시트1'), "memo": safe_ws('쪽지함'), "time": safe_ws('타임라인'),
-        "date": safe_ws('데이트일정'), "wish": safe_ws('위시리스트'), "review": safe_ws('데이트후기'),
-        "qna": safe_ws('문답데이터'), "capsule": safe_ws('타임캡슐데이터'),
-        "tele": safe_ws('텔레파시'), "jukebox": safe_ws('주크박스')
-    }
+    return { "main": safe_ws('시트1'), "memo": safe_ws('쪽지함'), "time": safe_ws('타임라인'), "date": safe_ws('데이트일정'), "wish": safe_ws('위시리스트'), "review": safe_ws('데이트후기'), "qna": safe_ws('문답데이터'), "capsule": safe_ws('타임캡슐데이터'), "tele": safe_ws('텔레파시'), "jukebox": safe_ws('주크박스') }
 
 services = get_sheets()
 
@@ -93,7 +87,8 @@ def extract_youtube_id(url):
     match = re.search(r'(?:v=|\/|be\/|embed\/)([0-9A-Za-z_-]{11})', url)
     return match.group(1) if match else None
 
-DRIVE_FOLDER_ID = st.secrets.get("DRIVE_FOLDER_ID", "")
+# 🚨 [사진 증발 에러 완벽 복구] 드라이브 시크릿 키 경로 원상 복귀
+DRIVE_FOLDER_ID = st.secrets.get("DRIVE_FOLDER_ID") or st.secrets.get("google_auth", {}).get("DRIVE_FOLDER_ID") or ""
 
 def get_drive_service():
     return build('drive', 'v3', credentials=get_credentials(), cache_discovery=False)
@@ -220,7 +215,7 @@ if check_login_and_user():
         .card, [data-testid="stExpander"] {{ background: rgba(255,255,255,0.5) !important; backdrop-filter: blur(10px); border-radius: 15px; padding: 15px; margin-bottom: 15px; border-left: 5px solid {accent_color} !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }}
         .user-boy {{ border-left:5px solid #4B89FF !important; background:rgba(75,137,255,0.15) !important; text-align: left; }}
         .user-girl {{ border-right:5px solid #FF85A2 !important; background:rgba(255,133,162,0.15) !important; text-align: right; border-left: none !important; }}
-        .review-badge {{ background-color: rgba(128,128,128,0.2); padding: 3px 8px; border-radius: 5px; font-size: 0.8rem; margin-right: 5px; color: {text_color}; }}
+        .review-badge {{ background-color: #eee; padding: 3px 8px; border-radius: 5px; font-size: 0.8rem; margin-right: 5px; color: #333; }}
         .review-comment {{ background-color: rgba(255,255,255,0.8); padding: 8px 12px; border-radius: 8px; margin-top: 5px; border: 1px solid rgba(0,0,0,0.05); }}
         div.stButton > button {{ border-radius: 20px; font-weight: bold; background-color: rgba(255,255,255,0.9) !important; color: {text_color} !important; border: 1px solid rgba(0,0,0,0.1) !important; }}
         </style>
@@ -230,24 +225,15 @@ if check_login_and_user():
     show_weather_effect(weather_type)
 
     # ==========================================
-    # 🌱 사이드바 완벽 복구 (배지 추가)
+    # 🌱 사이드바 완벽 복구
     # ==========================================
     total_act = len(st.session_state.memo_history) + len(st.session_state.timeline) + len(st.session_state.reviews)
     level, tree_icon = ("풍성한 나무", "🍎") if total_act >= 70 else (("아기 나무", "🌳") if total_act >= 30 else (("새싹", "🌿") if total_act >= 10 else ("씨앗", "🌱")))
     
-    # 🚨 사이드바 배지 시스템 복구
-    badges = []
-    if len(st.session_state.memo_history) >= 10: badges.append("📝 편지왕")
-    if len(st.session_state.reviews) >= 5: badges.append("🍽️ 미슐랭")
-    if len(st.session_state.date_schedules) >= 5: badges.append("🗓️ 파워J")
-    badge_html = "".join([f"<span style='background:rgba(255,255,255,0.4); padding:4px 8px; border-radius:10px; font-size:0.8em; margin:2px; display:inline-block;'>{b}</span>" for b in badges])
-
     with st.sidebar:
         st.markdown(f"""<div style="background:rgba(255,255,255,0.4); padding:15px; border-radius:15px; border:2px solid {accent_color}; text-align:center;">
                 <h1 style="margin:0;">{tree_icon}</h1><h4 style="margin:5px 0;">사랑나무: {level}</h4>
-                <p style="font-size:0.8em; color:gray; margin:0;">포인트: {total_act} XP</p>
-                <div style="margin-top:10px;">{badge_html}</div></div>""", unsafe_allow_html=True)
-        
+                <p style="font-size:0.8em; color:gray; margin:0;">포인트: {total_act} XP</p></div>""", unsafe_allow_html=True)
         start_date = datetime.date(2026, 1, 1); days_passed = (now_kst.date() - start_date).days + 1
         st.metric(label="🌸 우리의 D-Day", value=f"D + {days_passed}일")
         st.divider()
@@ -292,7 +278,7 @@ if check_login_and_user():
         if st.button("공지 확정"): st.session_state.notice = new_notice; save_main_data(); st.rerun()
 
     # ==========================================
-    # 🚨 9개 탭 구성
+    # 🚨 9개 탭 구성 (다른 코드 절대 수정 금지)
     # ==========================================
     tabs = st.tabs(["💕 데이트", "💌 쪽지함", "🌸 텔레파시", "🎵 주크박스", "📸 추억저장소", "⏳ 타임라인", "📍 장소/기록", "🎁 타임캡슐", "🎡 만능룰렛"])
 
@@ -304,7 +290,6 @@ if check_login_and_user():
             with st.expander("열어보기"):
                 for p in past_records: st.info(f"[{p['date']}] {p['user']}: {p['content']}")
 
-        # 🚨 80개 문답 + 남/여 색상 구분 완벽 복구
         qna_list = [
             "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?", "3. 내가 가장 사랑스러워 보일 때는 언제야?", "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?", "5. 지금 당장 훌쩍 떠난다면 같이 가고 싶은 여행지는?",
             "6. 지금까지 우리의 가장 완벽했던 데이트는 언제였어?", "7. 우리의 첫 키스(뽀뽀) 때 어떤 기분이었어?", "8. 내가 해준 음식 중 최고의 메뉴는?", "9. 서로의 연락처 저장명과 그렇게 정한 이유는 뭐야?", "10. 화났을 때 내 기분을 100% 풀어주는 최고의 방법은?",
@@ -360,7 +345,6 @@ if check_login_and_user():
                 st.session_state.mood_history.append(new_rec)
             save_main_data(); st.rerun()
 
-        # 🚨 기분 텍스트 요약 복구
         b_md = st.session_state.moods.get('수기남자친구', '🙂')
         g_md = st.session_state.moods.get('수기', '🙂')
         st.markdown(f"👦 **수기남자친구:** {b_md} ({mood_desc[b_md]})")
@@ -369,7 +353,7 @@ if check_login_and_user():
         if len(st.session_state.mood_history) >= 2:
             df = pd.DataFrame(st.session_state.mood_history).set_index('date')
             if '수기남자친구_score' in df.columns and '수기_score' in df.columns:
-                df = df[['수기남자친구_score', '수기_score']] # 🚨 순서 고정
+                df = df[['수기남자친구_score', '수기_score']]
                 df.columns = ['👦 남친 점수', '👧 수기 점수']
                 st.line_chart(df, color=["#4B89FF", "#FF85A2"])
         
@@ -426,7 +410,7 @@ if check_login_and_user():
                 if b_ans == g_ans: st.balloons(); st.success(f"찌찌뽕! **[{b_ans}]** ❤️")
                 else: st.info(f"👦 남친: {b_ans} / 👧 수기: {g_ans}")
 
-    # 4. 🎵 주크박스 (🚨 남/여 듀얼 채널 명시적 색상 분리 완벽 복구)
+    # 4. 🎵 주크박스
     with tabs[3]:
         st.subheader("🎵 오늘의 커플 DJ")
         if isinstance(st.session_state.jukebox_data, list): st.session_state.jukebox_data = {"hodl": None, "sugi": None}
@@ -449,7 +433,7 @@ if check_login_and_user():
             if g_id: st.video(yt_safe + g_id)
             else: st.info("아직 신청한 곡이 없어요!")
 
-    # 5. 📸 추억저장소 (🚨 과거 사진 렌더링 에러 및 폴더 구조 완벽 복구)
+    # 5. 📸 추억저장소 🚨 [사진 증발 에러 완벽 해결 (안전 폴더링)] 🚨
     with tabs[4]:
         st.subheader("📸 추억 보관함")
         with st.expander("✨ 새로운 추억 보관하기"):
@@ -486,7 +470,7 @@ if check_login_and_user():
                             st.session_state.photo_cart = []; st.rerun()
 
         st.divider()
-        # 🚨 오리지널 4단 폴더 파싱 로직 복구 (에러 방지)
+        # 오리지널 4단 폴더 로직 부활 (과거 사진 에러 방어)
         photos = load_photos_from_drive(st.session_state.photo_limit)
         grouped_photos = {}
         for p in photos:
@@ -521,7 +505,7 @@ if check_login_and_user():
         for t in st.session_state.timeline:
             st.markdown(f"<div class='card'><b>{t.get('date','')}</b>: {t.get('event','')}</div>", unsafe_allow_html=True)
 
-    # 7. 📍 장소/기록 (🚨 오리지널 카드형 UI & 대댓글 완벽 복구)
+    # 7. 📍 장소/기록
     with tabs[6]:
         st.subheader("📍 우리의 위시리스트")
         with st.form("w_form", clear_on_submit=True):
@@ -587,9 +571,9 @@ if check_login_and_user():
             else:
                 st.warning(f"🔒 [잠김] {cap.get('title')} ({cap.get('open_date')} 개봉 예정)")
 
-    # 9. 🎡 만능 룰렛 (🚨 오리지널 초고속 로직 복구)
+    # 9. 🎡 만능 룰렛 🚨 [오리지널 룰렛 100% 롤백]
     with tabs[8]:
-        st.subheader("🎡 만능 룰렛")
+        st.subheader("🎡 결정장애 룰렛")
         custom_opts = st.text_input("선택지 입력 (쉼표 구분)")
         if st.button("돌리기! 🎲") and custom_opts:
             st.success(f"🎉 당첨: **{random.choice([o.strip() for o in custom_opts.split(',') if o.strip()])}** ‼️")
