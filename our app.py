@@ -10,6 +10,7 @@ import os
 import re
 import requests
 import pandas as pd
+from PIL import Image, ImageOps # 🚨 [v5.0.6 신규] 안드로이드 사진 압축 엔진
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
@@ -25,21 +26,19 @@ today_str = str(now_kst.date())
 current_time_str = now_kst.strftime("%H:%M")
 
 # ==========================================
-# 🌤️ [v5.0 신규] 부산 실시간 날씨 API 연동 및 감성 이펙트
+# 🌤️ [v5.0] 부산 실시간 날씨 API 연동 및 감성 이펙트
 # ==========================================
-@st.cache_data(ttl=3600) # 1시간마다 갱신
+@st.cache_data(ttl=3600)
 def get_busan_weather_effect():
     try:
-        # 부산 위도/경도 (35.1796, 129.0756)
         res = requests.get("https://api.open-meteo.com/v1/forecast?latitude=35.1796&longitude=129.0756&current_weather=true", timeout=1.5)
         if res.status_code == 200:
             code = res.json().get("current_weather", {}).get("weathercode", 0)
-            # WMO Weather codes: 0(맑음), 1-3(구름조금/흐림), 51-67(비/이슬비), 71-77(눈)
             if code in [51, 53, 55, 61, 63, 65, 67, 80, 81, 82]: return "rain"
             elif code in [71, 73, 75, 77, 85, 86]: return "snow"
             elif code in [1, 2, 3]: return "cloud"
             else: return "sun"
-        return "sun" # 실패 시 기본값 맑음
+        return "sun"
     except:
         return "sun"
 
@@ -55,7 +54,7 @@ def show_weather_effect(w_type):
     elif w_type == "cloud":
         effect_css = """.effect { color: rgba(200, 200, 200, 0.5); font-size: 3em; position: fixed; top: 10%; z-index: -1; pointer-events: none; animation: drift 30s linear infinite; } @keyframes drift { 0% { left: -20%; } 100% { left: 120%; } }"""
         symbol = "☁️"
-    else: # 맑음
+    else:
         effect_css = """.effect { color: rgba(255, 223, 0, 0.3); font-size: 4em; position: fixed; top: 5%; left: 80%; z-index: -1; pointer-events: none; animation: pulse 4s ease-in-out infinite; } @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.3; } 50% { transform: scale(1.1); opacity: 0.6; } }"""
         symbol = "✨"
 
@@ -65,7 +64,7 @@ def show_weather_effect(w_type):
 show_weather_effect(weather_type)
 
 # ==========================================
-# 🍎 아이폰(iOS) 전용 홈 화면 아이콘 강제 주입
+# 🍎 아이폰(iOS) 홈 화면 아이콘 강제 주입
 # ==========================================
 components.html("""
     <script>
@@ -75,7 +74,6 @@ components.html("""
         window.parent.document.head.appendChild(link);
     </script>
 """, height=0, width=0)
-
 
 # --- 🚀 구글 인증 및 서비스 설정 ---
 @st.cache_resource
@@ -162,7 +160,7 @@ def load_data():
         "qna_data": get_json_cell(services["qna"], {}),
         "time_capsules": get_json_cell(services["capsule"], []),
         "tele_data": get_json_cell(services["tele"], {}),
-        "jukebox_data": get_json_cell(services["jukebox"], {"hodl": None, "sugi": None}) # 🚨 듀얼 채널 구조로 변경
+        "jukebox_data": get_json_cell(services["jukebox"], {"hodl": None, "sugi": None}) 
     }
 
 def save_data_to_cell(sheet_key, data):
@@ -269,7 +267,6 @@ if check_login_and_user():
         for k, v in saved.items(): st.session_state[k] = v
         st.session_state['data_loaded'] = True
         
-        # 페이징 리미트 초기화
         st.session_state.photo_limit = 20
         st.session_state.memo_limit = 10
         st.session_state.review_limit = 10
@@ -299,7 +296,6 @@ if check_login_and_user():
     elif total_activity < 70: level, tree_icon = "아기 나무", "🌳"
     else: level, tree_icon = "풍성한 나무", "🍎"
 
-    # 뱃지 시스템
     badges = []
     if len(st.session_state.memo_history) >= 10: badges.append("📝 편지왕")
     if len(st.session_state.reviews) >= 5: badges.append("🍽️ 미슐랭가이드")
@@ -322,7 +318,6 @@ if check_login_and_user():
             </div>
             """, unsafe_allow_html=True)
             
-        # 🚨 [D-Day +1일 교정 완료]
         start_date = datetime.date(2026, 1, 1) 
         days_passed = (now_kst.date() - start_date).days + 1 
         st.markdown(f"### 🌸 우리의 D-Day")
@@ -391,8 +386,8 @@ if check_login_and_user():
             st.session_state.toast_msg = "공지사항이 성공적으로 변경되었습니다! 📢"; st.rerun()
 
     # ==========================================
-    # 🚨 [v5.0] 탭 순서 100% 재배치
-    # 순서: 데이트 ➔ 쪽지함 ➔ 텔레파시 ➔ 주크박스 ➔ 추억저장소 ➔ 타임라인 ➔ 장소/기록 ➔ 타임캡슐 ➔ 만능룰렛
+    # 🚨 [v5.0.6 UX 재정렬] 탭 순서 동선 최적화 (요청하신 순서 100% 반영)
+    # 0:데이트 ➔ 1:쪽지함 ➔ 2:텔레파시 ➔ 3:주크박스 ➔ 4:추억저장소 ➔ 5:타임라인 ➔ 6:장소/기록 ➔ 7:타임캡슐 ➔ 8:만능룰렛
     # ==========================================
     tabs = st.tabs(["💕 데이트", "💌 쪽지함", "🌸 텔레파시", "🎵 주크박스", "📸 추억저장소", "⏳ 타임라인", "📍 장소/기록", "🎁 타임캡슐", "🎡 만능룰렛"])
 
@@ -400,7 +395,6 @@ if check_login_and_user():
     # 1. 💕 데이트
     # ------------------
     with tabs[0]:
-        # 🚨 [v5.0 신규] 문답 50제 대규모 확장! (총 80개)
         qna_list = [
             "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?", "3. 내가 가장 사랑스러워 보일 때는 언제야?", "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?", "5. 지금 당장 훌쩍 떠난다면 같이 가고 싶은 여행지는?",
             "6. 지금까지 우리의 가장 완벽했던 데이트는 언제였어?", "7. 우리의 첫 키스(뽀뽀) 때 어떤 기분이었어?", "8. 내가 해준 음식 중 최고의 메뉴는?", "9. 서로의 연락처 저장명과 그렇게 정한 이유는 뭐야?", "10. 화났을 때 내 기분을 100% 풀어주는 최고의 방법은?",
@@ -459,10 +453,8 @@ if check_login_and_user():
 
         st.divider()
 
-        # 🚨 [v5.0 신규] 우상향 기분 캔들 차트
         st.subheader("📈 우리의 기분 차트")
         if len(st.session_state.mood_history) >= 2:
-            # Pandas로 데이터를 변환하여 Line Chart 그리기
             df = pd.DataFrame(st.session_state.mood_history)
             df = df.set_index('date')
             df.columns = ['👦 남친 점수', '👧 수기 점수']
@@ -518,7 +510,7 @@ if check_login_and_user():
         st.write(f"👧 수기: {st.session_state.moods.get('수기', '🙂')} ({mood_desc.get(st.session_state.moods.get('수기', '🙂'), '보통')})")
 
     # ------------------
-    # 2. 💌 쪽지함 (페이징 추가)
+    # 2. 💌 쪽지함
     # ------------------
     with tabs[1]:
         st.subheader("💌 오늘의 쪽지 (수정은 당일만!)")
@@ -546,7 +538,6 @@ if check_login_and_user():
                         st.session_state.toast_msg = "오늘의 쪽지를 남겼습니다! 💌"; st.rerun()
 
         st.divider()
-        # 🚨 페이징 처리 적용
         for m in st.session_state.memo_history[:st.session_state.memo_limit]:
             is_boy = "수기남자친구" in m.get('user', '')
             align_cls = "user-boy" if is_boy else "user-girl"
@@ -557,11 +548,10 @@ if check_login_and_user():
                 st.session_state.memo_limit += 10; st.rerun()
 
     # ------------------
-    # 3. 🌸 텔레파시 (100제 확장)
+    # 3. 🌸 텔레파시
     # ------------------
     with tabs[2]:
         st.subheader("🌸 오늘의 텔레파시 밸런스 게임")
-        # 🚨 [v5.0 신규] 텔레파시 질문 100종 대거 추가!
         tele_questions = [
             ["평생 여름", "평생 겨울"], ["카레맛 똥", "똥맛 카레"], ["찍먹", "부먹"], ["강아지", "고양이"],
             ["연락 5시간 안됨", "친구(이성)랑 단둘이 밥"], ["월 200 백수", "월 1000 주100시간 근무"], ["평생 씻기 안함", "평생 이빨 안닦기"], ["초능력: 투명인간", "초능력: 하늘날기"],
@@ -589,7 +579,6 @@ if check_login_and_user():
             ["평생 한 가지 면요리만: 짜장면", "파스타"], ["애인과 꼭 해보고 싶은 전시회: 미술 전시회", "미디어 아트 전시회"], ["애인의 언어 습관: 욕설", "줄임말"], ["애인의 연락처: 내 이름 저장 안 함", "내 이름 이상하게 저장함"],
             ["평생 한 가지 고기만: 돼지고기", "소고기"], ["애인과 꼭 해보고 싶은 축제: 뮤직 페스티벌", "맥주 축제"], ["애인의 애완동물: 뱀/도마뱀", "거미"], ["애인의 특기: 노래", "춤"]
         ]
-        
         tele_idx = now_kst.toordinal() % len(tele_questions)
         q_pair = tele_questions[tele_idx]
         
@@ -624,12 +613,11 @@ if check_login_and_user():
             else: st.caption("아직 아무도 선택하지 않았어요! 먼저 텔레파시를 보내보세요 📡")
 
     # ------------------
-    # 4. 🎵 주크박스 (듀얼 채널 개편)
+    # 4. 🎵 주크박스
     # ------------------
     with tabs[3]:
         st.subheader("🎵 오늘의 커플 DJ")
         
-        # 데이터 구조 호환성 패치 (리스트 -> 딕셔너리로 마이그레이션)
         if isinstance(st.session_state.jukebox_data, list):
             st.session_state.jukebox_data = {"hodl": None, "sugi": None}
             
@@ -646,33 +634,28 @@ if check_login_and_user():
         b_song = st.session_state.jukebox_data.get("hodl")
         g_song = st.session_state.jukebox_data.get("sugi")
         
-        # 수기남자친구의 노래
         with st.container():
             st.markdown("<div class='card user-boy'><b>👦 수기남자친구님의 신청곡</b></div>", unsafe_allow_html=True)
             if b_song:
                 vid_id = extract_youtube_id(b_song)
                 if vid_id: st.video(f"https://www.youtube.com/watch?v={vid_id}")
                 else: st.warning("유효한 유튜브 링크가 아니에요!")
-            else:
-                st.caption("아직 신청곡이 없습니다.")
+            else: st.caption("아직 신청곡이 없습니다.")
                 
-        # 수기의 노래
         with st.container():
             st.markdown("<div class='card user-girl'><b>👧 수기님의 신청곡</b></div>", unsafe_allow_html=True)
             if g_song:
                 vid_id = extract_youtube_id(g_song)
                 if vid_id: st.video(f"https://www.youtube.com/watch?v={vid_id}")
                 else: st.warning("유효한 유튜브 링크가 아니에요!")
-            else:
-                st.caption("아직 신청곡이 없습니다.")
+            else: st.caption("아직 신청곡이 없습니다.")
 
     # ------------------
-    # 5. 📸 추억 저장소 (업로드 모듈 최적화 - 안드로이드 끊김 픽스)
+    # 5. 📸 추억 저장소 (🚨 [v5.0.6] 안드로이드 사진 업로드 튕김 방지 엔진 장착)
     # ------------------
     with tabs[4]:
         st.subheader("📸 2TB 우리들의 추억 저장소")
         with st.expander("✨ 새로운 추억 보관하기", expanded=False):
-            # 🚨 [v5.0] 안드로이드 브라우저 튕김 방지를 위해 form으로 감싸기
             with st.form("photo_upload_form", clear_on_submit=True):
                 img_files = st.file_uploader("사진을 여러 장 선택해서 올릴 수 있어요!", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
                 col_e1, col_e2 = st.columns([0.4, 0.6])
@@ -688,14 +671,34 @@ if check_login_and_user():
                             if not clean_event_name: clean_event_name = "우리의 일상"
                             selected_date_str = str(event_date_input)
                             success_count = 0
+                            
                             for img_file in img_files:
-                                ext = os.path.splitext(img_file.name)[1]
-                                if not ext: ext = ".jpg"
-                                filename = f"{selected_date_str}_{user_name_only}_{clean_event_name}_{random.randint(1000, 9999)}{ext}"
-                                if upload_photo_to_drive(img_file.getvalue(), filename, img_file.type): success_count += 1
-                                # 안드로이드 메모리 버퍼 비우기 (Delay)
-                                time.sleep(0.5) 
-                                
+                                try:
+                                    # 1. 🚨 PIL 엔진 가동: 갤럭시 대용량 카메라 원본 사진 열기 및 회전 보정
+                                    img = Image.open(img_file)
+                                    img = ImageOps.exif_transpose(img)
+                                    
+                                    # 2. 용량 압축 (15MB -> 1MB 이하)로 브라우저 OOM 튕김 완벽 방지
+                                    img.thumbnail((1920, 1920), Image.Resampling.LANCZOS)
+                                    if img.mode in ("RGBA", "P"): img = img.convert("RGB")
+                                    
+                                    # 3. 새로운 바이트 버퍼에 JPEG로 가볍게 저장
+                                    output_io = io.BytesIO()
+                                    img.save(output_io, format="JPEG", quality=85)
+                                    compressed_bytes = output_io.getvalue()
+                                    
+                                    ext = ".jpg"
+                                    filename = f"{selected_date_str}_{user_name_only}_{clean_event_name}_{random.randint(1000, 9999)}{ext}"
+                                    
+                                    # 압축된 데이터를 구글 드라이브로 쏜다!
+                                    if upload_photo_to_drive(compressed_bytes, filename, "image/jpeg"): 
+                                        success_count += 1
+                                    
+                                    time.sleep(0.3) # 통신 과부하 방지 쿨타임
+                                    
+                                except Exception as e:
+                                    st.error(f"사진 압축 중 에러 발생: {e}")
+                                    
                             if success_count > 0:
                                 st.session_state.toast_msg = f"{success_count}장의 추억이 드라이브에 영구 저장되었습니다! 🚀"; st.rerun()
                     else: st.warning("먼저 업로드할 사진을 선택해주세요!")
@@ -751,7 +754,7 @@ if check_login_and_user():
             st.markdown(f'<div class="card"><b>{item.get("date", "")}</b> ({item.get("by", "")})<br>{item.get("event", "")}</div>', unsafe_allow_html=True)
 
     # ------------------
-    # 7. 📍 장소/기록 (위시리스트 & 페이징 갤러리)
+    # 7. 📍 장소/기록
     # ------------------
     with tabs[6]:
         st.subheader("📍 우리의 위시리스트")
@@ -816,8 +819,6 @@ if check_login_and_user():
         
         st.divider()
         st.subheader("📚 우리의 데이트 기록장")
-        
-        # 🚨 [v5.0] 페이징 적용
         for i, r in enumerate(st.session_state.reviews[:st.session_state.review_limit]):
             if "comments" not in r: r["comments"] = []
             with st.container():
