@@ -27,7 +27,7 @@ today_str = str(now_kst.date())
 current_time_str = now_kst.strftime("%H:%M")
 
 # ==========================================
-# 🌤️ 실시간 날씨 API 연동 및 고급 CSS 감성 이펙트
+# 🌤️ 실시간 날씨 API 연동 및 고급 CSS 감성 이펙트 (대비 상향)
 # ==========================================
 @st.cache_data(ttl=3600)
 def get_busan_weather_effect():
@@ -44,40 +44,33 @@ def get_busan_weather_effect():
 
 weather_type = get_busan_weather_effect()
 
-def show_weather_effect(w_type, is_night=False):
-    # 🚨 [수정 완료] 모든 날씨 이펙트 z-index를 최상단(9999)으로 끌어올림
+def show_weather_effect(w_type):
+    # 🚨 [수정 완료] 야간 모드 삭제 및 밝은 배경에 대비되는 뚜렷한 색상/그림자 부여 (z-index: 9999)
     if w_type == "rain":
         effect_css = """
-        .drop { position: fixed; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(150, 200, 255, 0.8)); width: 2px; height: 10vh; top: -10vh; z-index: 9999; pointer-events: none; animation: fall 0.8s linear infinite; }
+        .drop { position: fixed; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(100, 150, 255, 0.6)); width: 2px; height: 10vh; top: -10vh; z-index: 9999; pointer-events: none; animation: fall 0.8s linear infinite; }
         @keyframes fall { to { transform: translateY(110vh); } }
         """
         divs = "".join([f"<div class='drop' style='left:{random.randint(0,100)}%; animation-delay:{random.uniform(0,1):.2f}s;'></div>" for _ in range(40)])
     elif w_type == "snow":
         effect_css = """
-        .flake { position: fixed; background: white; border-radius: 50%; box-shadow: 0 0 8px rgba(255,255,255,0.8); top: -10vh; z-index: 9999; pointer-events: none; animation: snow_fall 4s linear infinite, snow_shake 3s ease-in-out infinite alternate; }
+        .flake { position: fixed; background: rgba(255,255,255,0.9); border-radius: 50%; box-shadow: 0 0 5px rgba(100,150,255,0.4); top: -10vh; z-index: 9999; pointer-events: none; animation: snow_fall 4s linear infinite, snow_shake 3s ease-in-out infinite alternate; }
         @keyframes snow_fall { to { transform: translateY(110vh); } }
         @keyframes snow_shake { from { transform: translateX(-20px); } to { transform: translateX(20px); } }
         """
         divs = "".join([f"<div class='flake' style='left:{random.randint(0,100)}%; animation-delay:{random.uniform(0,4):.2f}s; width:{random.randint(5,10)}px; height:{random.randint(5,10)}px;'></div>" for _ in range(40)])
     elif w_type == "cloud":
         effect_css = """
-        .cloud-blob { position: fixed; background: rgba(255, 255, 255, 0.4); border-radius: 50%; filter: blur(30px); z-index: 9999; pointer-events: none; animation: drift 40s linear infinite; }
+        .cloud-blob { position: fixed; background: rgba(200, 210, 225, 0.6); border-radius: 50%; filter: blur(20px); z-index: 9999; pointer-events: none; animation: drift 40s linear infinite; }
         @keyframes drift { from { transform: translateX(-30vw); } to { transform: translateX(120vw); } }
         """
         divs = "".join([f"<div class='cloud-blob' style='top:{random.randint(-10,40)}vh; left:-30vw; width:{random.randint(30,50)}vw; height:{random.randint(15,30)}vh; animation-delay:{random.uniform(0,20):.1f}s;'></div>" for _ in range(6)])
     else:
-        if is_night:
-            effect_css = """
-            .star { position: fixed; background: white; border-radius: 50%; z-index: 9999; pointer-events: none; animation: twinkle 2s infinite ease-in-out alternate; }
-            @keyframes twinkle { 0% { opacity: 0.3; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 8px white; } }
-            """
-            divs = "".join([f"<div class='star' style='top:{random.randint(0,60)}vh; left:{random.randint(0,100)}vw; width:{random.randint(2,5)}px; height:{random.randint(2,5)}px; animation-delay:{random.uniform(0,2):.2f}s;'></div>" for _ in range(50)])
-        else:
-            effect_css = """
-            .sun-flare { position: fixed; top: -15vh; right: -15vw; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(255,220,100,0.4) 0%, rgba(255,220,100,0) 70%); border-radius: 50%; z-index: 9999; pointer-events: none; animation: pulse 5s ease-in-out infinite alternate; }
-            @keyframes pulse { from { transform: scale(1); opacity: 0.7; } to { transform: scale(1.1); opacity: 1; } }
-            """
-            divs = "<div class='sun-flare'></div>"
+        effect_css = """
+        .sun-flare { position: fixed; top: -15vh; right: -15vw; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(255,180,50,0.5) 0%, rgba(255,220,100,0) 60%); border-radius: 50%; z-index: 9999; pointer-events: none; animation: pulse 5s ease-in-out infinite alternate; }
+        @keyframes pulse { from { transform: scale(1); opacity: 0.7; } to { transform: scale(1.1); opacity: 1; } }
+        """
+        divs = "<div class='sun-flare'></div>"
     
     st.markdown(f"<style>{effect_css}</style><div aria-hidden='true'>{divs}</div>", unsafe_allow_html=True)
 
@@ -119,7 +112,7 @@ def get_sheets():
 services = get_sheets()
 if not services: st.error("🚨 구글 연동 실패! Secrets 설정을 확인해주세요.")
 
-# --- 🚨 [버그 픽스] 유튜브 URL 추출기 방어막 ---
+# --- 🚨 유튜브 URL 추출기 방어막 ---
 def extract_youtube_id(url):
     if not url or not isinstance(url, str): return None
     pattern = r'(?:v=|\/|be\/|embed\/)([0-9A-Za-z_-]{11})'
@@ -277,9 +270,7 @@ if check_login_and_user():
             st.session_state.current_mood_date = today_str
             save_main_data()
 
-    # 🎨 화사한 파스텔 배경 고정 & 낮/밤 구별 변수
-    current_hour = now_kst.hour
-    is_night = current_hour >= 19 or current_hour <= 6
+    # 🎨 화사한 파스텔 배경 고정
     bg_color = "#FFF5F7" if user_name_only == "수기" else "#E3F2FD"
     accent_color = "#FF85A2" if user_name_only == "수기" else "#4B89FF"
     text_color = "#333333" 
@@ -312,7 +303,7 @@ if check_login_and_user():
     """, unsafe_allow_html=True)
 
     # 🔥 날씨 이펙트 실행
-    show_weather_effect(weather_type, is_night)
+    show_weather_effect(weather_type)
 
     # ==========================================
     # 🌱 다마고치 사랑나무 & 배지 & 📊 월간 백서 (사이드바)
@@ -338,7 +329,7 @@ if check_login_and_user():
         
         st.divider()
         
-        # 🚨 [월간 수기 백서] 사이드바 중앙
+        # 🚨 [월간 수기 백서] 사이드바로 이식 유지
         st.markdown("### 📊 월간 수기 백서")
         this_month = now_kst.strftime("%Y-%m")
         m_rev = [r for r in st.session_state.reviews if r.get('date','').startswith(this_month)]
