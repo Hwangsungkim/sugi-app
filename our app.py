@@ -17,7 +17,7 @@ from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
 import streamlit.components.v1 as components
 
 # 1. 앱 기본 설정
-st.set_page_config(page_title="수기 커플 노트 v5.8", page_icon="❤️", layout="centered")
+st.set_page_config(page_title="수기 커플 노트 v5.9", page_icon="❤️", layout="centered")
 
 # --- 🌐 한국 시간(KST) 설정 ---
 KST = pytz.timezone('Asia/Seoul')
@@ -26,7 +26,7 @@ today_str = str(now_kst.date())
 current_time_str = now_kst.strftime("%H:%M")
 
 # ==========================================
-# 🌤️ 실시간 날씨 API 연동 (심플 & 직관)
+# 🌤️ 실시간 날씨 API 연동 (가장 심플하고 직관적인 텍스트/이모티콘)
 # ==========================================
 @st.cache_data(ttl=3600)
 def get_weather_simple():
@@ -42,6 +42,9 @@ def get_weather_simple():
     except: return "☀️ 맑음"
 
 weather_str = get_weather_simple()
+
+# --- 🍎 아이폰 전용 홈 화면 아이콘 ---
+components.html("""<script>const link = window.parent.document.createElement('link'); link.rel = 'apple-touch-icon'; link.href = 'https://cdn-icons-png.flaticon.com/512/833/833472.png'; window.parent.document.head.appendChild(link);</script>""", height=0, width=0)
 
 # --- 🚀 구글 인증 및 서비스 설정 ---
 @st.cache_resource
@@ -69,6 +72,7 @@ def get_sheets():
     }
 
 services = get_sheets()
+if not services: st.error("🚨 구글 연동 실패! Secrets 설정을 확인해주세요.")
 
 # --- 드라이브 & 유틸리티 ---
 def extract_youtube_id(url):
@@ -127,7 +131,7 @@ def load_data():
         try: val = sheet_obj.acell('A1').value; return json.loads(val) if val else default_val
         except: return default_val
     return {
-        "notice": main_data.get("notice", "비타민 챙겨 먹기! ✨"),
+        "notice": main_data.get("notice", "오늘 하루도 서로 아껴주기! ✨"),
         "promises": main_data.get("promises", [{"text": "서운한 건 그날 바로 말하기 🗣️", "by": "수기남자친구"}]),
         "moods": main_data.get("moods", {"수기남자친구": "🙂", "수기": "🙂"}),
         "mood_history": main_data.get("mood_history", []),
@@ -174,14 +178,14 @@ def check_login_and_user():
     if "current_user" not in st.session_state: st.session_state["current_user"] = None
     if not st.session_state["password_correct"]:
         st.markdown("<h1 style='text-align: center; color: #FF85A2; margin-top: 50px;'>♥ 수기 커플 노트</h1>", unsafe_allow_html=True)
-        st.text_input("우리만의 비밀번호", type="password", key="pwd_input", on_change=validate_password); return False
+        st.text_input("우리만의 비밀번호를 입력해주세요", type="password", key="pwd_input", on_change=validate_password); return False
     if not st.session_state["current_user"]:
         st.markdown("<h2 style='text-align: center; color: #FF85A2; margin-top: 50px;'>누가 오셨나요? 👀</h2>", unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         with c1:
-            if st.button("👦 수기남자친구"): st.session_state["current_user"] = "수기남자친구"; st.query_params["auth"] = "hodl"; st.rerun()
+            if st.button("👦 수기남자친구", use_container_width=True): st.session_state["current_user"] = "수기남자친구"; st.query_params["auth"] = "hodl"; st.rerun()
         with c2:
-            if st.button("👧 수기"): st.session_state["current_user"] = "수기"; st.query_params["auth"] = "sugi"; st.rerun()
+            if st.button("👧 수기", use_container_width=True): st.session_state["current_user"] = "수기"; st.query_params["auth"] = "sugi"; st.rerun()
         return False
     return True
 
@@ -193,7 +197,7 @@ if check_login_and_user():
         st.session_state['data_loaded'] = True; st.session_state.photo_limit = 20; st.session_state.memo_limit = 10; st.session_state.review_limit = 10; st.session_state.photo_cart = []
         if st.session_state.current_mood_date != today_str: st.session_state.moods = {"수기남자친구": "🙂", "수기": "🙂"}; st.session_state.current_mood_date = today_str; save_main_data()
 
-    # 🎨 [완벽 복구] 가독성 고대비 테마 (24시간 파스텔 톤)
+    # 🎨 [디자인 고정] 명도/가독성 최적화된 24시간 파스텔 테마 (다크모드 영구삭제)
     bg_color = "#FFF5F7" if user_name_only == "수기" else "#E3F2FD"
     accent_color = "#FF85A2" if user_name_only == "수기" else "#4B89FF"
     text_color = "#333333"
@@ -210,30 +214,31 @@ if check_login_and_user():
             background-color: rgba(255,255,255,0.9) !important; color: #000000 !important; border: 1px solid rgba(0,0,0,0.1) !important;
         }}
         div[data-testid="stSidebar"], [data-testid="stSidebar"] > div:first-child {{ background-color: rgba(255,255,255,0.6) !important; border-right: 1px solid rgba(0,0,0,0.05) !important; }}
-        .card, [data-testid="stExpander"] {{ background: rgba(255,255,255,0.4) !important; backdrop-filter: blur(12px); border-radius: 15px; padding: 15px; margin-bottom: 15px; border-left: 5px solid {accent_color} !important; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }}
+        .card, [data-testid="stExpander"] {{ background: rgba(255,255,255,0.45) !important; backdrop-filter: blur(10px); border-radius: 15px; padding: 15px; margin-bottom: 15px; border-left: 5px solid {accent_color} !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }}
         .user-boy {{ border-left:5px solid #4B89FF !important; background:rgba(75,137,255,0.15) !important; text-align: left; }}
         .user-girl {{ border-right:5px solid #FF85A2 !important; background:rgba(255,133,162,0.15) !important; text-align: right; border-left: none !important; }}
         .review-comment {{ background-color: rgba(255,255,255,0.7); padding: 8px 12px; border-radius: 8px; margin-top: 5px; border: 1px solid rgba(0,0,0,0.05); }}
-        div.stButton > button {{ border-radius: 20px; font-weight: bold; background-color: rgba(255,255,255,0.8) !important; color: {text_color} !important; border: 1px solid rgba(0,0,0,0.1) !important; }}
+        div.stButton > button {{ border-radius: 20px; font-weight: bold; background-color: rgba(255,255,255,0.85) !important; color: {text_color} !important; border: 1px solid rgba(0,0,0,0.1) !important; }}
         [data-testid="stMetricValue"] {{ color: {accent_color} !important; }}
         </style>
     """, unsafe_allow_html=True)
 
     # ==========================================
-    # 🌱 사이드바 (사랑나무 + 월간백서 + 약속)
+    # 🌱 사이드바 완벽 복구 (사랑나무 + D-Day + 월간백서 + 우리의 약속)
     # ==========================================
     total_act = len(st.session_state.memo_history) + len(st.session_state.timeline) + len(st.session_state.reviews)
     level, tree_icon = ("풍성한 나무", "🍎") if total_act >= 70 else (("아기 나무", "🌳") if total_act >= 30 else (("새싹", "🌿") if total_act >= 10 else ("씨앗", "🌱")))
     
     with st.sidebar:
-        st.markdown(f"""<div style="background:rgba(255,255,255,0.3); padding:15px; border-radius:15px; border:2px solid {accent_color}; text-align:center;">
-                <h1>{tree_icon}</h1><h4 style="margin:0;">사랑나무: {level}</h4>
-                <p style="font-size:0.8em; color:gray;">포인트: {total_act} XP</p></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div style="background:rgba(255,255,255,0.4); padding:15px; border-radius:15px; border:2px solid {accent_color}; text-align:center;">
+                <h1 style="margin:0;">{tree_icon}</h1><h4 style="margin:5px 0;">사랑나무: {level}</h4>
+                <p style="font-size:0.8em; color:gray; margin:0;">포인트: {total_act} XP</p></div>""", unsafe_allow_html=True)
         
-        start_date = datetime.date(2026, 1, 1); d_val = (now_kst.date() - start_date).days + 1
-        st.metric(label="우리의 D-Day", value=f"D + {d_val}일")
-        
+        start_date = datetime.date(2026, 1, 1); days_passed = (now_kst.date() - start_date).days + 1
+        st.metric(label="🌸 우리의 D-Day", value=f"D + {days_passed}일")
         st.divider()
+
+        # 📊 월간 수기 백서
         st.markdown("### 📊 월간 수기 백서")
         this_month = now_kst.strftime("%Y-%m")
         m_rev = [r for r in st.session_state.reviews if str(r.get('date','')).startswith(this_month)]
@@ -242,54 +247,60 @@ if check_login_and_user():
         c_s1, c_s2 = st.columns(2)
         c_s1.metric("데이트", f"{len(m_rev)}회"); c_s2.metric("쪽지", f"{len(m_memo)}개")
         
-        # 단어 분석 (Dictionary)
         all_text = " ".join([m.get('content', '') for m in m_memo] + [r.get('comment', '') for r in m_rev])
         words = [w for w in re.findall(r'[가-힣]{2,}', all_text) if len(w) > 1]
         counts = {}
         for w in words: counts[w] = counts.get(w, 0) + 1
         top_words = sorted(counts.items(), key=lambda x: x[1], reverse=True)[:3]
         if top_words:
-            st.markdown("**🏷️ 많이 쓴 단어**")
+            st.markdown("**🏷️ 이번 달 핵심 단어**")
             st.caption(" ".join([f"#{w[0]}" for w in top_words]))
-        
         st.divider()
+
+        # 📜 우리의 약속
         st.markdown("### 📜 우리의 약속")
         for i, p in enumerate(st.session_state.promises):
             p_text = p['text'] if isinstance(p, dict) else p
-            st.write(f"{i+1}. {p_text}")
-        with st.expander("약속 추가✍️"):
-            new_p = st.text_input("새 내용", key="side_p_in")
+            col_p1, col_p2 = st.columns([0.8, 0.2])
+            col_p1.write(f"{i+1}. {p_text}")
+            if col_p2.button("X", key=f"del_p_{i}"):
+                st.session_state.promises.pop(i); save_main_data(); st.rerun()
+                
+        with st.expander("약속 추가하기 ✍️"):
+            new_p = st.text_input("새로운 다짐", key="side_p_in")
             if st.button("저장", key="side_p_btn") and new_p:
                 st.session_state.promises.append({"text": new_p, "by": user_name_only}); save_main_data(); st.rerun()
-        
         st.divider()
-        if st.button("로그아웃 🚪"): st.query_params.clear(); st.session_state.clear(); st.rerun()
+        if st.button("로그아웃 🚪", use_container_width=True): st.query_params.clear(); st.session_state.clear(); st.rerun()
 
-    # --- 메인 헤더 (날씨 이모티콘 통합) ---
-    col_h1, col_h2 = st.columns([0.8, 0.2])
+    # --- 메인 헤더 (날씨 이모티콘 텍스트) ---
+    col_h1, col_h2 = st.columns([0.85, 0.15])
     col_h1.markdown(f"<h2 style='color: #FF85A2; margin:0;'>♥ 수기 커플 노트 {weather_str}</h2>", unsafe_allow_html=True)
     if col_h2.button("🔄 리셋"): st.session_state.clear(); st.rerun()
 
     st.success(f"📢 {st.session_state.notice}")
+    with st.expander("✏️ 공지사항 수정"):
+        new_notice = st.text_input("공지 내용", value=st.session_state.notice)
+        if st.button("공지 확정"): st.session_state.notice = new_notice; save_main_data(); st.rerun()
 
     # ==========================================
-    # 🚨 탭 구성 (무결성 풀 로직)
+    # 🚨 9개 탭 구성 (유실 제로화 완벽 복구)
     # ==========================================
     tabs = st.tabs(["💕 데이트", "💌 쪽지함", "🌸 텔레파시", "🎵 주크박스", "📸 추억저장소", "⏳ 타임라인", "📍 장소/기록", "🎁 타임캡슐", "🎡 만능룰렛"])
 
-    # 1. 💕 데이트 (QnA 80제 + 기분 체크 + 차트)
+    # 1. 💕 데이트 탭
     with tabs[0]:
         past_records = [m for m in st.session_state.memo_history if m.get('date', '').endswith(now_kst.strftime("-%m-%d")) and m.get('date') != today_str]
         if past_records:
             st.warning(f"🕰️ **과거에서 온 추억:** 예전 오늘, 이런 마음을 남겼었네요!")
-            with st.expander("추억 열어보기"):
+            with st.expander("열어보기"):
                 for p in past_records: st.info(f"[{p['date']}] {p['user']}: {p['content']}")
 
-        # 80개 문답 DB (전부 수동 교정 완료)
+        # 80개 문답 DB 무결성 하드코딩
         qna_list = [
             "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?", "3. 내가 가장 사랑스러워 보일 때는 언제야?", "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?", "5. 지금 당장 훌쩍 떠난다면 같이 가고 싶은 여행지는?",
             "6. 지금까지 우리의 가장 완벽했던 데이트는 언제였어?", "7. 우리의 첫 키스(뽀뽀) 때 어떤 기분이었어?", "8. 내가 해준 음식 중 최고의 메뉴는?", "9. 서로의 연락처 저장명과 그렇게 정한 이유는 뭐야?", "10. 화났을 때 내 기분을 100% 풀어주는 최고의 방법은?",
-            "11. 나에게 들었던 가장 감동적인 말은 무엇이었어?", "12. 꼭 같이 배워보고 싶은 취미나 운동이 있다면?", "13. 나의 어떤 점을 가장 닮고 싶어?", "14. 지금까지 만나면서 나에게 가장 고마웠던 순간은?", "15. 싸웠을 때 우리의 암묵적인 루을 하나 정한다면?",
+            "11. 나에게 들었던 가장 감동적인 말은 무엇이었어?", "12. 꼭 같이 배워보고 싶은 취미나 운동이 있다면?", "13. 나의 어떤 점을 가장 닮고 싶어?", "14. 지금까지 만나면서 나에게 가장 고마웠던 순간은?", "15. 싸웠을 때 우리의 암묵적인 룰을 하나 정한다면?",
             "16. 나를 생각하면 가장 먼저 떠오르는 노래는?", "17. 내가 가장 섹시해(멋있어/예뻐) 보일 때는 언제야?", "18. 서로에게 주고 싶은 가장 특별하고 의미 있는 선물은?", "19. 우리의 첫 데이트 때, 겉으론 안 그랬지만 속마음은 어땠어?", "20. 나를 동물로 표현한다면 어떤 동물이고 이유는 뭐야?",
             "21. 우리의 연애를 영화 장르로 따지면 어떤 장르일까?", "22. 하루 동안 서로 몸이 바뀐다면 가장 해보고 싶은 것은?", "23. 서로의 가족에게 해주고 싶은 작은 이벤트가 있다면?", "24. 폰에 있는 우리의 커플 사진 중 가장 좋아하는 사진은?", "25. 나를 만나고 나서 긍정적으로 변한 점이 있다면?",
             "26. 1년 뒤 오늘, 우리는 어떤 모습으로 무엇을 하고 있을까?", "27. 10년 뒤 우리는 서로에게 어떤 사람일까?", "28. 이번 주말, 나랑 하루 종일 방 안에서만 놀기 vs 하루 종일 밖에서 놀기", "29. 서로에게 절대 변치 말자고 엄지 걸고 약속하고 싶은 것 1가지는?", "30. 지금 당장 상대방을 꽉 안아주면서 해주고 싶은 말은?",
@@ -325,8 +336,8 @@ if check_login_and_user():
                 save_data_to_cell("qna", st.session_state.qna_data); st.rerun()
 
         st.divider()
-        # 🎭 기분 체크 (원상 복구)
-        st.subheader("🎭 오늘 우리의 기분 점수")
+        # 🎭 기분 체크 슬라이더 및 차트 (완벽 복원)
+        st.subheader("🎭 오늘 우리의 기분")
         mood_opts = ["😢", "☁️", "🙂", "🥰", "🔥"]
         my_mood = st.select_slider(f"{user_name_only}의 기분 선택", options=mood_opts, value=st.session_state.moods.get(user_name_only, "🙂"))
         if st.button("기분 업데이트 ✨"):
@@ -342,15 +353,15 @@ if check_login_and_user():
 
         if len(st.session_state.mood_history) >= 2:
             df = pd.DataFrame(st.session_state.mood_history).set_index('date')
-            df.columns = ['👦 남친', '👧 수기']; st.line_chart(df, color=["#4B89FF", "#FF85A2"])
+            df.columns = ['👦 남친 점수', '👧 수기 점수']
+            st.line_chart(df, color=["#4B89FF", "#FF85A2"])
         
         st.divider()
         st.subheader("🗓️ 데이트 일정")
         with st.form("sch_form", clear_on_submit=True):
-            sd = st.date_input("날짜"); sp = st.text_input("계획")
-            if st.form_submit_button("추가") and sp:
-                st.session_state.date_schedules.append({"date": str(sd), "plan": sp, "by": user_name_only})
-                save_large_data("date", st.session_state.date_schedules); st.rerun()
+            sd = st.date_input("날짜"); sp = st.text_input("어디서 무얼 할까요?")
+            if st.form_submit_button("일정 추가") and sp:
+                st.session_state.date_schedules.append({"date": str(sd), "plan": sp, "by": user_name_only}); save_large_data("date", st.session_state.date_schedules); st.rerun()
         for i, s in enumerate(st.session_state.date_schedules):
             with st.expander(f"📌 {s['date']} {s['plan']}"):
                 if st.button("삭제", key=f"ds_{i}"): st.session_state.date_schedules.pop(i); save_large_data("date", st.session_state.date_schedules); st.rerun()
@@ -358,7 +369,7 @@ if check_login_and_user():
     # 2. 💌 쪽지함
     with tabs[1]:
         st.subheader("💌 오늘의 한마디")
-        content = st.text_area("하고 싶은 말 전하기", key="memo_in")
+        content = st.text_area("마음 전하기", key="memo_in")
         if st.button("보내기 ✈️") and content:
             st.session_state.memo_history.insert(0, {"date": today_str, "time": current_time_str, "user": user_name_only, "content": content})
             save_large_data("memo", st.session_state.memo_history); st.rerun()
@@ -368,13 +379,22 @@ if check_login_and_user():
         if len(st.session_state.memo_history) > st.session_state.memo_limit:
             if st.button("더 보기 ⬇️"): st.session_state.memo_limit += 10; st.rerun()
 
-    # 3. 🌸 텔레파시 (수동 결과 확인)
+    # 3. 🌸 텔레파시 탭
     with tabs[2]:
         st.subheader("🌸 오늘의 텔레파시")
+        # 100개 텔레파시 풀 리스트
         tele_qs = [
-            ["평생 여름", "평생 겨울"], ["카레맛 똥", "똥맛 카레"], ["찍먹", "부먹"], ["강아지", "고양이"],
-            ["연락 5시간 안됨", "남사친/여사친과 술"], ["월 200 백수", "월 1000 주100시간"], ["평생 씻기 안함", "평생 이빨 안닦기"], ["초능력: 투명인간", "초능력: 하늘날기"]
-        ] # (100개 풀 리스트 대응)
+            ["평생 여름", "평생 겨울"], ["카레맛 똥", "똥맛 카레"], ["찍먹", "부먹"], ["강아지", "고양이"], ["연락 5시간 안됨", "여사친과 단둘이 밥"], ["월 200 백수", "월 1000 주100시간"], ["평생 안씻기", "평생 양치안하기"], ["투명인간", "하늘날기"], ["좋아하는 사람", "나를 좋아하는 사람"], ["넷플릭스", "아웃도어"],
+            ["고기 안먹기", "밀가루 안먹기"], ["찬물 샤워", "뜨거운 물"], ["미남미녀", "천재"], ["스몰웨딩", "호텔예식"], ["무인도 1박", "흉가 1박"], ["라면만 먹기", "치킨만 먹기"], ["내 흑역사 보여주기", "애인 흑역사 보기"], ["환승이별", "잠수이별"], ["과거보는 연인", "미래보는 연인"], ["에어컨 없이", "보일러 없이"],
+            ["바퀴벌레 먹고 10억", "안먹고 안받기"], ["기억 모두 잃은 애인", "나만 잃은 애인"], ["당첨금 혼자", "반반 나누기"], ["스마트폰 없이", "컴퓨터 없이"], ["폰 맡기기", "폰 보기"], ["싸우면 당장풀기", "시간갖기"], ["이성친구랑 커피", "이성친구랑 술"], ["낮만 있기", "밤만 있기"], ["애인 빚 10억", "내 빚 10억"], ["매운것만", "단것만"],
+            ["돈많고 바쁜 애인", "돈없고 항상같이"], ["내가 더 사랑", "더 사랑받는"], ["내생각 읽히기", "내가 생각읽기"], ["지문등록 필수", "선택"], ["비싼선물", "정성편지"], ["콜라", "커피"], ["하루종일 집", "하루종일 밖"], ["로맨스", "액션"], ["유럽여행", "휴양지"], ["애교로 풀기", "논리적 대화"],
+            ["방귀냄새 최악", "코골이 최악"], ["수영", "헬스"], ["동거 찬성", "반대"], ["통장 각자", "전담"], ["딩크", "자녀2명"], ["게임", "독서"], ["져주는편", "이기는편"], ["사랑해", "고마워"], ["과거 다알기", "전혀 모르기"], ["봄", "가을"],
+            ["놀이공원 교복", "호캉스"], ["공공장소 스킨십", "절대불가"], ["주사 잠자기", "울기"], ["검정옷", "하양옷"], ["커플반지", "커플티"], ["10분연락", "하루한번"], ["선의거짓말 용서", "절대불가"], ["떡볶이", "초밥"], ["배낭여행", "호캉스"], ["남사친여사친 불가", "선지키면가능"],
+            ["아이돌덕질", "애니덕질"], ["소주", "맥주"], ["등산", "베이킹"], ["극단적편식", "뭐든잘먹음"], ["짠돌이", "욜로"], ["유튜브", "넷플릭스"], ["협동게임", "경쟁게임"], ["장발", "단발"], ["마른체형", "근육질체형"], ["치킨", "족발"],
+            ["카페알바", "단기알바"], ["이갈기", "잠꼬대"], ["난폭운전", "초보운전"], ["비누향", "머스크향"], ["테니스", "볼링"], ["스트릿패션", "수트오피스룩"], ["손목작은타투", "등에큰타투"], ["아이스크림", "과자"], ["댄스챌린지", "먹방챌린지"], ["비공개계정", "인플루언서"],
+            ["극E", "극I"], ["수박", "딸기"], ["캐릭터팝업", "패션팝업"], ["요리 셰프급", "라면도못끓임"], ["결벽증", "돼지우리"], ["크루아상", "소금빵"], ["원데이클래스", "장기클래스"], ["정치반대", "관심없음"], ["종교반대", "무교"], ["짜장면", "파스타"],
+            ["미술전시", "미디어아트"], ["욕설", "줄임말"], ["이름저장안함", "이상하게저장"], ["돼지고기", "소고기"], ["뮤직페스티벌", "맥주축제"], ["뱀키우기", "거미키우기"], ["노래", "춤"], ["매일야근", "매일회식"], ["카톡만", "전화만"], ["10억받고 헤어지기", "그냥 계속 사귀기"]
+        ]
         t_idx = now_kst.toordinal() % len(tele_qs); q_pair = tele_qs[t_idx]
         st.session_state.tele_data.setdefault(today_str, {"hodl": None, "sugi": None})
         ans = st.session_state.tele_data[today_str]["hodl" if user_name_only == "수기남자친구" else "sugi"]
@@ -389,9 +409,8 @@ if check_login_and_user():
             if st.button("🎁 결과 확인 (풍선 팡!)", use_container_width=True):
                 if b_ans == g_ans: st.balloons(); st.success(f"찌찌뽕! **[{b_ans}]** ❤️")
                 else: st.info(f"👦 남친: {b_ans} / 👧 수기: {g_ans}")
-        else: st.warning("🔒 상대방의 선택을 기다리는 중...")
 
-    # 4. 🎵 주크박스 (듀얼 채널 원상 복구)
+    # 4. 🎵 주크박스 (듀얼 채널)
     with tabs[3]:
         st.subheader("🎵 오늘의 커플 DJ")
         if isinstance(st.session_state.jukebox_data, list): st.session_state.jukebox_data = {"hodl": None, "sugi": None}
@@ -408,40 +427,44 @@ if check_login_and_user():
             g_id = extract_youtube_id(st.session_state.jukebox_data.get("sugi", ""))
             if g_id: st.markdown("👧 **수기 Pick**"); st.video(yt_safe + g_id)
 
-    # 5. 📸 추억저장소 (아이폰 vs 갤럭시 + 폴더 복구 + 개별 삭제)
+    # 5. 📸 추억저장소 (아이폰 vs 갤럭시 + 날짜/제목별 폴더 분류)
     with tabs[4]:
         st.subheader("📸 추억 보관함")
         with st.expander("✨ 새로운 추억 보관하기"):
-            mode = st.radio("업로드 방식", ["🍎 아이폰 (여러 장)", "🤖 갤럭시 (장바구니)"], horizontal=True)
-            col1, col2 = st.columns([0.4, 0.6])
-            ev_d = col1.date_input("날짜", key="ph_d"); ev_n = col2.text_input("제목", key="ph_n", placeholder="해운대 데이트")
+            mode = st.radio("업로드 방식", ["🍎 아이폰 (여러 장 한 번에)", "🤖 갤럭시 (1장씩 장바구니)"], horizontal=True)
+            col_a, col_b = st.columns([0.4, 0.6])
+            ev_d = col_a.date_input("언제 있었던 일인가요?", key="ph_d")
+            ev_n = col_b.text_input("어떤 추억인가요?", placeholder="예: 해운대 바다", key="ph_n")
+            
             if "아이폰" in mode:
-                img_fs = st.file_uploader("사진들 선택", type=['jpg','png','jpeg'], accept_multiple_files=True)
-                if st.button("☁️ 한 번에 업로드"):
+                img_fs = st.file_uploader("사진을 여러 장 쭈욱 선택하세요", type=['jpg','png','jpeg'], accept_multiple_files=True)
+                if st.button("☁️ 한 번에 업로드", use_container_width=True):
                     if img_fs:
                         with st.spinner("드라이브로 전송 중..."):
                             for f in img_fs:
                                 try:
                                     img = Image.open(f); img = ImageOps.exif_transpose(img)
                                     img.thumbnail((1920, 1920)); out = io.BytesIO(); img.save(out, format="JPEG", quality=85)
-                                    upload_photo_to_drive(out.getvalue(), f"{ev_d}_{user_name_only}_{ev_n}_{random.randint(1000,9999)}.jpg", "image/jpeg")
+                                    safe_name = f"{ev_d}_{user_name_only}_{ev_n}_{random.randint(1000,9999)}.jpg"
+                                    upload_photo_to_drive(out.getvalue(), safe_name, "image/jpeg")
                                 except: pass
-                            st.success("완료!"); st.rerun()
+                            st.success("업로드 완료!"); st.rerun()
             else:
                 new_f = st.file_uploader("1장씩 고르기", type=['jpg','png','jpeg'], accept_multiple_files=False)
                 if st.button("🛒 장바구니 담기") and new_f:
                     st.session_state.photo_cart.append(new_f.getvalue()); st.toast("🛒 담김!"); st.rerun()
                 if st.session_state.photo_cart:
                     st.info(f"현재 {len(st.session_state.photo_cart)}장 대기 중")
-                    if st.button("☁️ 장바구니 전송"):
+                    if st.button("☁️ 장바구니 모두 전송", use_container_width=True):
                         with st.spinner("전송 중..."):
                             for fb in st.session_state.photo_cart:
                                 img = Image.open(io.BytesIO(fb)); img.thumbnail((1920, 1920)); out = io.BytesIO(); img.save(out, format="JPEG", quality=85)
-                                upload_photo_to_drive(out.getvalue(), f"{ev_d}_{user_name_only}_{ev_n}_{random.randint(1000,9999)}.jpg", "image/jpeg")
+                                safe_name = f"{ev_d}_{user_name_only}_{ev_n}_{random.randint(1000,9999)}.jpg"
+                                upload_photo_to_drive(out.getvalue(), safe_name, "image/jpeg")
                             st.session_state.photo_cart = []; st.rerun()
 
         st.divider()
-        # [복구] 날짜별 폴더 렌더링 로직
+        # 폴더 렌더링 원상 복구
         photos = load_photos_from_drive(st.session_state.photo_limit)
         grouped = {}
         for p in photos:
@@ -470,7 +493,7 @@ if check_login_and_user():
         for t in st.session_state.timeline:
             st.markdown(f"<div class='card'><b>{t.get('date','')}</b>: {t.get('event','')}</div>", unsafe_allow_html=True)
 
-    # 7. 📍 장소/기록 (위시리스트 + 후기 댓글 시스템 원복)
+    # 7. 📍 장소/기록 (위시리스트 + 데이트 후기 댓글/삭제 완벽 복구)
     with tabs[6]:
         st.subheader("📍 우리의 위시리스트")
         with st.form("w_form"):
@@ -482,48 +505,51 @@ if check_login_and_user():
             with st.expander(f"{'✅' if v else '📍'} {w.get('place','')}"):
                 if st.checkbox("다녀왔어요!", value=v, key=f"chk_{i}") != v:
                     st.session_state.wishlist[i]['visited'] = not v; save_large_data("wish", st.session_state.wishlist); st.rerun()
+                if st.button("삭제", key=f"del_w_{i}"):
+                    st.session_state.wishlist.pop(i); save_large_data("wish", st.session_state.wishlist); st.rerun()
         
         st.divider()
         st.subheader("📝 데이트 후기")
-        with st.form("r_form"):
+        with st.form("r_form", clear_on_submit=True):
             rn = st.text_input("장소명"); rc = st.text_area("내용")
-            if st.form_submit_button("등록"):
+            if st.form_submit_button("후기 등록"):
                 st.session_state.reviews.insert(0, {"name": rn, "comment": rc, "date": today_str, "by": user_name_only, "comments": []}); save_large_data("review", st.session_state.reviews); st.rerun()
         
         for i, r in enumerate(st.session_state.reviews):
             with st.container():
                 st.markdown(f"<div class='card'><b>{r.get('name','')}</b> ({r.get('date','')})<p>{r.get('comment','')}</p></div>", unsafe_allow_html=True)
-                for c_idx, c in enumerate(r.get("comments", [])):
+                for c_idx, c in enumerate(r.setdefault("comments", [])):
                     st.markdown(f"<div class='review-comment'><b>{c.get('user')}</b>: {c.get('text')}</div>", unsafe_allow_html=True)
                     if c.get('user') == user_name_only:
-                        if st.button("❌ 내 댓글 삭제", key=f"dc_{i}_{c_idx}"):
+                        if st.button("❌ 댓글 삭제", key=f"dc_{i}_{c_idx}"):
                             r["comments"].pop(c_idx); save_large_data("review", st.session_state.reviews); st.rerun()
-                with st.expander("댓글 남기기"):
-                    nc = st.text_input("내용", key=f"nc_{i}")
+                
+                with st.expander("💬 댓글 남기기 / 원본 관리"):
+                    nc = st.text_input("댓글 입력", key=f"nc_{i}")
                     if st.button("전송", key=f"nb_{i}"):
-                        r.setdefault("comments", []).append({"user": user_name_only, "text": nc}); save_large_data("review", st.session_state.reviews); st.rerun()
+                        r["comments"].append({"user": user_name_only, "text": nc}); save_large_data("review", st.session_state.reviews); st.rerun()
                     if r.get('by') == user_name_only:
-                        if st.button("🗑️ 후기 삭제", key=f"rb_{i}"):
+                        if st.button("🗑️ 후기 원본 삭제", key=f"rb_{i}"):
                             st.session_state.reviews.pop(i); save_large_data("review", st.session_state.reviews); st.rerun()
 
-    # 8. 🎁 타임캡슐 (복구)
+    # 8. 🎁 타임캡슐
     with tabs[7]:
         st.subheader("🎁 미래의 우리에게")
         with st.form("cap_form"):
-            ct = st.text_input("제목"); cd = st.date_input("열어볼 날짜"); cc = st.text_area("내용")
+            ct = st.text_input("제목"); cd = st.date_input("열어볼 날짜", min_value=now_kst.date() + datetime.timedelta(days=1)); cc = st.text_area("내용")
             if st.form_submit_button("⛏️ 묻기"):
                 st.session_state.time_capsules.append({"title": ct, "open_date": str(cd), "content": cc, "by": user_name_only}); save_data_to_cell("capsule", st.session_state.time_capsules); st.rerun()
         for i, cap in enumerate(st.session_state.time_capsules):
             if today_str >= cap.get('open_date', ''):
                 with st.expander(f"🎉 [열림] {cap.get('title')}"):
                     st.write(cap.get('content'))
-                    if st.button("🗑️ 삭제", key=f"del_cap_{i}"): st.session_state.time_capsules.pop(i); save_data_to_cell("capsule", st.session_state.time_capsules); st.rerun()
+                    if st.button("🗑️ 버리기", key=f"del_cap_{i}"): st.session_state.time_capsules.pop(i); save_data_to_cell("capsule", st.session_state.time_capsules); st.rerun()
             else:
                 st.warning(f"🔒 [잠김] {cap.get('title')} ({cap.get('open_date')} 개봉 예정)")
 
-    # 9. 🎡 만능 룰렛 (복구)
+    # 9. 🎡 만능 룰렛
     with tabs[8]:
         st.subheader("🎡 결정장애 해결사")
-        opts = st.text_input("선택지 입력 (쉼표 구분)")
+        opts = st.text_input("선택지를 쉼표(,)로 구분해서 적어주세요")
         if st.button("🎲 돌리기!") and opts:
-            st.success(f"당첨: {random.choice([o.strip() for o in opts.split(',') if o.strip()])} ‼️"); st.balloons()
+            st.success(f"🎉 당첨: {random.choice([o.strip() for o in opts.split(',') if o.strip()])} ‼️"); st.balloons()
