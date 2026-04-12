@@ -10,7 +10,7 @@ import os
 import re
 import requests
 import pandas as pd
-from PIL import Image, ImageOps # 🚨 [v5.0.6 신규] 안드로이드 사진 압축 엔진
+from PIL import Image, ImageOps
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
@@ -651,57 +651,52 @@ if check_login_and_user():
             else: st.caption("아직 신청곡이 없습니다.")
 
     # ------------------
-    # 5. 📸 추억 저장소 (🚨 [v5.0.6] 안드로이드 사진 업로드 튕김 방지 엔진 장착)
+    # 5. 📸 추억 저장소 (🚨 [v5.0.7] 폼 껍데기 박살! 안드로이드 증발 완벽 픽스)
     # ------------------
     with tabs[4]:
         st.subheader("📸 2TB 우리들의 추억 저장소")
         with st.expander("✨ 새로운 추억 보관하기", expanded=False):
-            with st.form("photo_upload_form", clear_on_submit=True):
-                img_files = st.file_uploader("사진을 여러 장 선택해서 올릴 수 있어요!", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
-                col_e1, col_e2 = st.columns([0.4, 0.6])
-                with col_e1: event_date_input = st.date_input("언제 있었던 일인가요? 🗓️", value=now_kst.date())
-                with col_e2: event_name_input = st.text_input("어떤 추억인가요? ✏️", placeholder="예: 해운대 앞바다")
-                
-                submit_upload = st.form_submit_button("☁️ 2TB 드라이브에 안전하게 업로드")
-                
-                if submit_upload:
-                    if img_files:
-                        with st.spinner("구글 드라이브 궁전으로 추억들을 전송하고 있습니다... ⏳ (안드로이드 최적화 모드)"):
-                            clean_event_name = event_name_input.strip().replace("_", " ").replace("/", " ")
-                            if not clean_event_name: clean_event_name = "우리의 일상"
-                            selected_date_str = str(event_date_input)
-                            success_count = 0
-                            
-                            for img_file in img_files:
-                                try:
-                                    # 1. 🚨 PIL 엔진 가동: 갤럭시 대용량 카메라 원본 사진 열기 및 회전 보정
-                                    img = Image.open(img_file)
-                                    img = ImageOps.exif_transpose(img)
-                                    
-                                    # 2. 용량 압축 (15MB -> 1MB 이하)로 브라우저 OOM 튕김 완벽 방지
-                                    img.thumbnail((1920, 1920), Image.Resampling.LANCZOS)
-                                    if img.mode in ("RGBA", "P"): img = img.convert("RGB")
-                                    
-                                    # 3. 새로운 바이트 버퍼에 JPEG로 가볍게 저장
-                                    output_io = io.BytesIO()
-                                    img.save(output_io, format="JPEG", quality=85)
-                                    compressed_bytes = output_io.getvalue()
-                                    
-                                    ext = ".jpg"
-                                    filename = f"{selected_date_str}_{user_name_only}_{clean_event_name}_{random.randint(1000, 9999)}{ext}"
-                                    
-                                    # 압축된 데이터를 구글 드라이브로 쏜다!
-                                    if upload_photo_to_drive(compressed_bytes, filename, "image/jpeg"): 
-                                        success_count += 1
-                                    
-                                    time.sleep(0.3) # 통신 과부하 방지 쿨타임
-                                    
-                                except Exception as e:
-                                    st.error(f"사진 압축 중 에러 발생: {e}")
-                                    
-                            if success_count > 0:
-                                st.session_state.toast_msg = f"{success_count}장의 추억이 드라이브에 영구 저장되었습니다! 🚀"; st.rerun()
-                    else: st.warning("먼저 업로드할 사진을 선택해주세요!")
+            # 🚨 폼 삭제: 버튼 누르기 전에 메모리에서 증발하는 현상 원천 차단
+            img_files = st.file_uploader("사진을 여러 장 선택해서 올릴 수 있어요!", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+            col_e1, col_e2 = st.columns([0.4, 0.6])
+            with col_e1: event_date_input = st.date_input("언제 있었던 일인가요? 🗓️", value=now_kst.date())
+            with col_e2: event_name_input = st.text_input("어떤 추억인가요? ✏️", placeholder="예: 해운대 앞바다")
+            
+            if st.button("☁️ 2TB 드라이브에 안전하게 업로드"):
+                if img_files:
+                    with st.spinner("구글 드라이브 궁전으로 추억들을 전송하고 있습니다... ⏳ (안드로이드 최적화 모드)"):
+                        clean_event_name = event_name_input.strip().replace("_", " ").replace("/", " ")
+                        if not clean_event_name: clean_event_name = "우리의 일상"
+                        selected_date_str = str(event_date_input)
+                        success_count = 0
+                        
+                        for img_file in img_files:
+                            try:
+                                # 🚨 PIL 이미지 압축 엔진 가동 (20MB -> 1MB 이하 압축)
+                                img = Image.open(img_file)
+                                img = ImageOps.exif_transpose(img)
+                                img.thumbnail((1920, 1920), Image.Resampling.LANCZOS)
+                                if img.mode in ("RGBA", "P"): img = img.convert("RGB")
+                                
+                                output_io = io.BytesIO()
+                                img.save(output_io, format="JPEG", quality=85)
+                                compressed_bytes = output_io.getvalue()
+                                
+                                ext = ".jpg"
+                                filename = f"{selected_date_str}_{user_name_only}_{clean_event_name}_{random.randint(1000, 9999)}{ext}"
+                                
+                                if upload_photo_to_drive(compressed_bytes, filename, "image/jpeg"): 
+                                    success_count += 1
+                                time.sleep(0.3) # 통신 과부하 방지
+                                
+                            except Exception as e:
+                                st.error(f"사진 처리 중 에러 발생: {e}")
+                                
+                        if success_count > 0:
+                            st.session_state.toast_msg = f"{success_count}장의 추억이 드라이브에 영구 저장되었습니다! 🚀"
+                            st.rerun()
+                else: 
+                    st.warning("먼저 업로드할 사진을 선택해주세요!")
                 
         st.divider()
         photos = load_photos_from_drive(limit=st.session_state.photo_limit)
