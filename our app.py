@@ -45,6 +45,7 @@ def get_busan_weather_effect():
 weather_type = get_busan_weather_effect()
 
 def show_weather_effect(w_type, is_night=False):
+    # 🚨 [수정 완료] 모든 날씨 이펙트 z-index를 최상단(9999)으로 끌어올림
     if w_type == "rain":
         effect_css = """
         .drop { position: fixed; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(150, 200, 255, 0.8)); width: 2px; height: 10vh; top: -10vh; z-index: 9999; pointer-events: none; animation: fall 0.8s linear infinite; }
@@ -60,20 +61,20 @@ def show_weather_effect(w_type, is_night=False):
         divs = "".join([f"<div class='flake' style='left:{random.randint(0,100)}%; animation-delay:{random.uniform(0,4):.2f}s; width:{random.randint(5,10)}px; height:{random.randint(5,10)}px;'></div>" for _ in range(40)])
     elif w_type == "cloud":
         effect_css = """
-        .cloud-blob { position: fixed; background: rgba(255, 255, 255, 0.4); border-radius: 50%; filter: blur(30px); z-index: -99998; pointer-events: none; animation: drift 40s linear infinite; }
+        .cloud-blob { position: fixed; background: rgba(255, 255, 255, 0.4); border-radius: 50%; filter: blur(30px); z-index: 9999; pointer-events: none; animation: drift 40s linear infinite; }
         @keyframes drift { from { transform: translateX(-30vw); } to { transform: translateX(120vw); } }
         """
         divs = "".join([f"<div class='cloud-blob' style='top:{random.randint(-10,40)}vh; left:-30vw; width:{random.randint(30,50)}vw; height:{random.randint(15,30)}vh; animation-delay:{random.uniform(0,20):.1f}s;'></div>" for _ in range(6)])
     else:
         if is_night:
             effect_css = """
-            .star { position: fixed; background: white; border-radius: 50%; z-index: -99998; pointer-events: none; animation: twinkle 2s infinite ease-in-out alternate; }
+            .star { position: fixed; background: white; border-radius: 50%; z-index: 9999; pointer-events: none; animation: twinkle 2s infinite ease-in-out alternate; }
             @keyframes twinkle { 0% { opacity: 0.3; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 8px white; } }
             """
             divs = "".join([f"<div class='star' style='top:{random.randint(0,60)}vh; left:{random.randint(0,100)}vw; width:{random.randint(2,5)}px; height:{random.randint(2,5)}px; animation-delay:{random.uniform(0,2):.2f}s;'></div>" for _ in range(50)])
         else:
             effect_css = """
-            .sun-flare { position: fixed; top: -15vh; right: -15vw; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(255,220,100,0.4) 0%, rgba(255,220,100,0) 70%); border-radius: 50%; z-index: -99998; pointer-events: none; animation: pulse 5s ease-in-out infinite alternate; }
+            .sun-flare { position: fixed; top: -15vh; right: -15vw; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(255,220,100,0.4) 0%, rgba(255,220,100,0) 70%); border-radius: 50%; z-index: 9999; pointer-events: none; animation: pulse 5s ease-in-out infinite alternate; }
             @keyframes pulse { from { transform: scale(1); opacity: 0.7; } to { transform: scale(1.1); opacity: 1; } }
             """
             divs = "<div class='sun-flare'></div>"
@@ -310,11 +311,11 @@ if check_login_and_user():
         </style>
     """, unsafe_allow_html=True)
 
-    # 🔥 날씨 이펙트 실행 (CSS가 배경 위에 깔리도록 메인 블록에서 호출)
+    # 🔥 날씨 이펙트 실행
     show_weather_effect(weather_type, is_night)
 
     # ==========================================
-    # 🌱 다마고치 사랑나무 & 배지 & 📊 월간 백서 (사이드바 이동 완료)
+    # 🌱 다마고치 사랑나무 & 배지 & 📊 월간 백서 (사이드바)
     # ==========================================
     total_act = len(st.session_state.memo_history) + len(st.session_state.timeline) + len(st.session_state.reviews)
     level, tree_icon = ("풍성한 나무", "🍎") if total_act >= 70 else (("아기 나무", "🌳") if total_act >= 30 else (("새싹", "🌿") if total_act >= 10 else ("씨앗", "🌱")))
@@ -337,7 +338,7 @@ if check_login_and_user():
         
         st.divider()
         
-        # 🚨 [월간 수기 백서] 탭 6에서 사이드바로 완벽 이동
+        # 🚨 [월간 수기 백서] 사이드바 중앙
         st.markdown("### 📊 월간 수기 백서")
         this_month = now_kst.strftime("%Y-%m")
         m_rev = [r for r in st.session_state.reviews if r.get('date','').startswith(this_month)]
@@ -510,7 +511,7 @@ if check_login_and_user():
         if len(st.session_state.memo_history) > st.session_state.memo_limit:
             if st.button("더 보기 ⬇️"): st.session_state.memo_limit += 10; st.rerun()
 
-    # 3. 🌸 텔레파시 (수동 격발)
+    # 3. 🌸 텔레파시
     with tabs[2]:
         st.subheader("🌸 오늘의 텔레파시")
         questions = [
@@ -695,7 +696,7 @@ if check_login_and_user():
                 save_large_data("time", st.session_state.timeline); st.rerun()
         for t in st.session_state.timeline: st.markdown(f"<div class='card'><b>{t['date']}</b>: {t['event']}</div>", unsafe_allow_html=True)
 
-    # 7. 📍 장소/기록 (월간 수기 백서 이동 완료)
+    # 7. 📍 장소/기록
     with tabs[6]:
         st.subheader("📍 우리의 위시리스트")
         with st.form("w_form", clear_on_submit=True):
