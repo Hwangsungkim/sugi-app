@@ -27,7 +27,7 @@ today_str = str(now_kst.date())
 current_time_str = now_kst.strftime("%H:%M")
 
 # ==========================================
-# 🌤️ 실시간 날씨 API 연동 및 고급 CSS 감성 이펙트 (이모티콘 삭제)
+# 🌤️ 실시간 날씨 API 연동 및 고급 CSS 감성 이펙트
 # ==========================================
 @st.cache_data(ttl=3600)
 def get_busan_weather_effect():
@@ -44,37 +44,41 @@ def get_busan_weather_effect():
 
 weather_type = get_busan_weather_effect()
 
-def show_weather_effect(w_type):
+def show_weather_effect(w_type, is_night=False):
     if w_type == "rain":
-        # 빗줄기 CSS
         effect_css = """
-        .drop { position: fixed; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(150, 200, 255, 0.5)); 
-                width: 2px; height: 10vh; top: -10vh; z-index: 9999; pointer-events: none; animation: fall 0.7s linear infinite; }
+        .drop { position: fixed; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(150, 200, 255, 0.8)); width: 2px; height: 10vh; top: -10vh; z-index: 9999; pointer-events: none; animation: fall 0.8s linear infinite; }
         @keyframes fall { to { transform: translateY(110vh); } }
         """
-        divs = "".join([f"<div class='drop' style='left:{random.randint(0,100)}%; animation-delay:{random.uniform(0,1):.2f}s;'></div>" for _ in range(30)])
-        st.markdown(f"<style>{effect_css}</style><div aria-hidden='true'>{divs}</div>", unsafe_allow_html=True)
-    
+        divs = "".join([f"<div class='drop' style='left:{random.randint(0,100)}%; animation-delay:{random.uniform(0,1):.2f}s;'></div>" for _ in range(40)])
     elif w_type == "snow":
-        # 눈송이 CSS
         effect_css = """
-        .flake { position: fixed; background: rgba(255, 255, 255, 0.8); border-radius: 50%; box-shadow: 0 0 5px rgba(255,255,255,0.5);
-                 top: -10vh; z-index: 9999; pointer-events: none; animation: snow_fall 4s linear infinite, snow_shake 3s ease-in-out infinite alternate; }
+        .flake { position: fixed; background: white; border-radius: 50%; box-shadow: 0 0 8px rgba(255,255,255,0.8); top: -10vh; z-index: 9999; pointer-events: none; animation: snow_fall 4s linear infinite, snow_shake 3s ease-in-out infinite alternate; }
         @keyframes snow_fall { to { transform: translateY(110vh); } }
-        @keyframes snow_shake { from { transform: translateX(-15px); } to { transform: translateX(15px); } }
+        @keyframes snow_shake { from { transform: translateX(-20px); } to { transform: translateX(20px); } }
         """
-        divs = "".join([f"<div class='flake' style='left:{random.randint(0,100)}%; animation-delay:{random.uniform(0,4):.2f}s; width:{random.randint(4,8)}px; height:{random.randint(4,8)}px;'></div>" for _ in range(30)])
-        st.markdown(f"<style>{effect_css}</style><div aria-hidden='true'>{divs}</div>", unsafe_allow_html=True)
-    
+        divs = "".join([f"<div class='flake' style='left:{random.randint(0,100)}%; animation-delay:{random.uniform(0,4):.2f}s; width:{random.randint(5,10)}px; height:{random.randint(5,10)}px;'></div>" for _ in range(40)])
     elif w_type == "cloud":
-        # 흐린 날 은은한 오버레이
-        st.markdown("""<style>.cloud-layer { position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(200, 210, 220, 0.15); z-index:-99998; pointer-events:none; }</style><div class="cloud-layer"></div>""", unsafe_allow_html=True)
-    
+        effect_css = """
+        .cloud-blob { position: fixed; background: rgba(255, 255, 255, 0.4); border-radius: 50%; filter: blur(30px); z-index: -99998; pointer-events: none; animation: drift 40s linear infinite; }
+        @keyframes drift { from { transform: translateX(-30vw); } to { transform: translateX(120vw); } }
+        """
+        divs = "".join([f"<div class='cloud-blob' style='top:{random.randint(-10,40)}vh; left:-30vw; width:{random.randint(30,50)}vw; height:{random.randint(15,30)}vh; animation-delay:{random.uniform(0,20):.1f}s;'></div>" for _ in range(6)])
     else:
-        # 맑은 날 햇빛 그라데이션
-        st.markdown("""<style>.sun-layer { position: fixed; top:0; left:0; width:100vw; height:100vh; background: radial-gradient(circle at top right, rgba(255, 220, 100, 0.12), transparent 60%); z-index:-99998; pointer-events:none; }</style><div class="sun-layer"></div>""", unsafe_allow_html=True)
-
-show_weather_effect(weather_type)
+        if is_night:
+            effect_css = """
+            .star { position: fixed; background: white; border-radius: 50%; z-index: -99998; pointer-events: none; animation: twinkle 2s infinite ease-in-out alternate; }
+            @keyframes twinkle { 0% { opacity: 0.3; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 8px white; } }
+            """
+            divs = "".join([f"<div class='star' style='top:{random.randint(0,60)}vh; left:{random.randint(0,100)}vw; width:{random.randint(2,5)}px; height:{random.randint(2,5)}px; animation-delay:{random.uniform(0,2):.2f}s;'></div>" for _ in range(50)])
+        else:
+            effect_css = """
+            .sun-flare { position: fixed; top: -15vh; right: -15vw; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(255,220,100,0.4) 0%, rgba(255,220,100,0) 70%); border-radius: 50%; z-index: -99998; pointer-events: none; animation: pulse 5s ease-in-out infinite alternate; }
+            @keyframes pulse { from { transform: scale(1); opacity: 0.7; } to { transform: scale(1.1); opacity: 1; } }
+            """
+            divs = "<div class='sun-flare'></div>"
+    
+    st.markdown(f"<style>{effect_css}</style><div aria-hidden='true'>{divs}</div>", unsafe_allow_html=True)
 
 # --- 🍎 아이폰(iOS) 전용 홈 화면 아이콘 강제 주입 ---
 components.html("""
@@ -114,7 +118,7 @@ def get_sheets():
 services = get_sheets()
 if not services: st.error("🚨 구글 연동 실패! Secrets 설정을 확인해주세요.")
 
-# --- 🚨 [버그 픽스] 유튜브 URL 추출기 방어막 (None 에러 차단) ---
+# --- 🚨 [버그 픽스] 유튜브 URL 추출기 방어막 ---
 def extract_youtube_id(url):
     if not url or not isinstance(url, str): return None
     pattern = r'(?:v=|\/|be\/|embed\/)([0-9A-Za-z_-]{11})'
@@ -272,57 +276,14 @@ if check_login_and_user():
             st.session_state.current_mood_date = today_str
             save_main_data()
 
-    # 🎨 [디자인 완벽 롤백] 야간 모드 영구 삭제. 화사한 파스텔 배경 고정
+    # 🎨 화사한 파스텔 배경 고정 & 낮/밤 구별 변수
+    current_hour = now_kst.hour
+    is_night = current_hour >= 19 or current_hour <= 6
     bg_color = "#FFF5F7" if user_name_only == "수기" else "#E3F2FD"
     accent_color = "#FF85A2" if user_name_only == "수기" else "#4B89FF"
     text_color = "#333333" 
     
-    # ==========================================
-    # 🌱 다마고치 사랑나무 & 배지 (사이드바)
-    # ==========================================
-    total_act = len(st.session_state.memo_history) + len(st.session_state.timeline) + len(st.session_state.reviews)
-    level, tree_icon = ("풍성한 나무", "🍎") if total_act >= 70 else (("아기 나무", "🌳") if total_act >= 30 else (("새싹", "🌿") if total_act >= 10 else ("씨앗", "🌱")))
-    
-    badges = []
-    if len(st.session_state.memo_history) >= 10: badges.append("📝 편지왕")
-    if len(st.session_state.reviews) >= 5: badges.append("🍽️ 미슐랭")
-    if len(st.session_state.date_schedules) >= 5: badges.append("🗓️ 파워J")
-    badge_html = "".join([f"<span style='background:rgba(255,255,255,0.4); padding:4px 8px; border-radius:10px; font-size:0.8em; margin:2px; display:inline-block;'>{b}</span>" for b in badges])
-
-    with st.sidebar:
-        st.markdown(f"""<div style="background:rgba(255,255,255,0.4); padding:15px; border-radius:15px; border:2px solid {accent_color}; text-align:center; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                <h1 style="margin:0;">{tree_icon}</h1><h4 style="color:{text_color}; margin:5px 0;">사랑나무: {level}</h4>
-                <p style="font-size:0.8em; color:gray; margin:0;">포인트: {total_act} XP</p><div style="margin-top:10px;">{badge_html}</div></div>""", unsafe_allow_html=True)
-        
-        start_date = datetime.date(2026, 1, 1) 
-        days_passed = (now_kst.date() - start_date).days + 1 
-        st.markdown(f"### 🌸 우리의 D-Day")
-        st.metric(label=f"연애 시작일: {start_date}", value=f"D + {days_passed}일")
-        
-        st.divider()
-        st.markdown("### 🗓️ 오늘 데이트 일정")
-        today_plans = [p for p in st.session_state.date_schedules if p['date'] == today_str]
-        if today_plans:
-            for p in today_plans: st.write(f"✨ {p['plan']}")
-        else: st.caption("오늘 등록된 일정이 없어요!")
-            
-        st.divider()
-        st.markdown("### 📜 우리의 약속")
-        for i, p in enumerate(st.session_state.promises):
-            p_text = p['text'] if isinstance(p, dict) else p
-            st.write(f"{i+1}. {p_text}")
-            
-        with st.expander("약속 추가하기 ✍️"):
-            new_promise = st.text_input("새로운 약속", key="new_promise_input")
-            if st.button("추가") and new_promise:
-                st.session_state.promises.append({"text": new_promise, "by": user_name_only})
-                save_main_data()
-                st.session_state.toast_msg = "새로운 약속이 추가되었습니다! 🤝"; st.rerun()
-            
-        st.divider()
-        if st.button("로그아웃 🚪"): st.query_params.clear(); st.session_state.clear(); st.rerun()
-
-    # --- CSS 주입 (가독성 및 감성 테마 100% 복원) ---
+    # --- CSS 주입 (가독성 및 감성 테마) ---
     st.markdown(f"""
         <div class="custom-bg-layer" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background-color:{bg_color}; z-index:-99999; pointer-events:none;"></div>
         <style>
@@ -349,6 +310,79 @@ if check_login_and_user():
         </style>
     """, unsafe_allow_html=True)
 
+    # 🔥 날씨 이펙트 실행 (CSS가 배경 위에 깔리도록 메인 블록에서 호출)
+    show_weather_effect(weather_type, is_night)
+
+    # ==========================================
+    # 🌱 다마고치 사랑나무 & 배지 & 📊 월간 백서 (사이드바 이동 완료)
+    # ==========================================
+    total_act = len(st.session_state.memo_history) + len(st.session_state.timeline) + len(st.session_state.reviews)
+    level, tree_icon = ("풍성한 나무", "🍎") if total_act >= 70 else (("아기 나무", "🌳") if total_act >= 30 else (("새싹", "🌿") if total_act >= 10 else ("씨앗", "🌱")))
+    
+    badges = []
+    if len(st.session_state.memo_history) >= 10: badges.append("📝 편지왕")
+    if len(st.session_state.reviews) >= 5: badges.append("🍽️ 미슐랭")
+    if len(st.session_state.date_schedules) >= 5: badges.append("🗓️ 파워J")
+    badge_html = "".join([f"<span style='background:rgba(255,255,255,0.4); padding:4px 8px; border-radius:10px; font-size:0.8em; margin:2px; display:inline-block;'>{b}</span>" for b in badges])
+
+    with st.sidebar:
+        st.markdown(f"""<div style="background:rgba(255,255,255,0.4); padding:15px; border-radius:15px; border:2px solid {accent_color}; text-align:center; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                <h1 style="margin:0;">{tree_icon}</h1><h4 style="color:{text_color}; margin:5px 0;">사랑나무: {level}</h4>
+                <p style="font-size:0.8em; color:gray; margin:0;">포인트: {total_act} XP</p><div style="margin-top:10px;">{badge_html}</div></div>""", unsafe_allow_html=True)
+        
+        start_date = datetime.date(2026, 1, 1) 
+        days_passed = (now_kst.date() - start_date).days + 1 
+        st.markdown(f"### 🌸 우리의 D-Day")
+        st.metric(label=f"연애 시작일: {start_date}", value=f"D + {days_passed}일")
+        
+        st.divider()
+        
+        # 🚨 [월간 수기 백서] 탭 6에서 사이드바로 완벽 이동
+        st.markdown("### 📊 월간 수기 백서")
+        this_month = now_kst.strftime("%Y-%m")
+        m_rev = [r for r in st.session_state.reviews if r.get('date','').startswith(this_month)]
+        m_memo = [m for m in st.session_state.memo_history if m.get('date','').startswith(this_month)]
+        
+        st.write(f"📅 **{now_kst.month}월 결산**")
+        c_s1, c_s2 = st.columns(2)
+        c_s1.metric("데이트", f"{len(m_rev)}회")
+        c_s2.metric("쪽지", f"{len(m_memo)}개")
+        
+        all_text = " ".join([m.get('content', '') for m in m_memo] + [r.get('comment', '') for r in m_rev])
+        words = [w for w in re.findall(r'[가-힣]{2,}', all_text) if len(w) > 1]
+        
+        word_counts = {}
+        for w in words: word_counts[w] = word_counts.get(w, 0) + 1
+        top_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)[:3]
+        
+        if top_words:
+            st.markdown("**🏷️ 가장 많이 쓴 단어**")
+            st.caption(" ".join([f"#{w[0]}" for w in top_words]))
+        
+        st.divider()
+        
+        st.markdown("### 🗓️ 오늘 데이트 일정")
+        today_plans = [p for p in st.session_state.date_schedules if p['date'] == today_str]
+        if today_plans:
+            for p in today_plans: st.write(f"✨ {p['plan']}")
+        else: st.caption("오늘 등록된 일정이 없어요!")
+            
+        st.divider()
+        st.markdown("### 📜 우리의 약속")
+        for i, p in enumerate(st.session_state.promises):
+            p_text = p['text'] if isinstance(p, dict) else p
+            st.write(f"{i+1}. {p_text}")
+            
+        with st.expander("약속 추가하기 ✍️"):
+            new_promise = st.text_input("새로운 약속", key="new_promise_input")
+            if st.button("추가") and new_promise:
+                st.session_state.promises.append({"text": new_promise, "by": user_name_only})
+                save_main_data()
+                st.session_state.toast_msg = "새로운 약속이 추가되었습니다! 🤝"; st.rerun()
+            
+        st.divider()
+        if st.button("로그아웃 🚪"): st.query_params.clear(); st.session_state.clear(); st.rerun()
+
     col_h1, col_h2 = st.columns([0.85, 0.15])
     col_h1.markdown(f"<h2 style='color: #FF85A2; margin:0;'>♥ 수기 커플 노트</h2>", unsafe_allow_html=True)
     if col_h2.button("🔄 새로고침"): st.session_state.clear(); st.rerun()
@@ -362,7 +396,6 @@ if check_login_and_user():
 
     # ==========================================
     # 🚨 탭 순서 동선 최적화
-    # 0:데이트 ➔ 1:쪽지함 ➔ 2:텔레파시 ➔ 3:주크박스 ➔ 4:추억저장소 ➔ 5:타임라인 ➔ 6:장소/기록 ➔ 7:타임캡슐 ➔ 8:만능룰렛
     # ==========================================
     tabs = st.tabs(["💕 데이트", "💌 쪽지함", "🌸 텔레파시", "🎵 주크박스", "📸 추억저장소", "⏳ 타임라인", "📍 장소/기록", "🎁 타임캡슐", "🎡 만능룰렛"])
 
@@ -534,7 +567,6 @@ if check_login_and_user():
         st.subheader("🎵 오늘의 커플 DJ")
         if isinstance(st.session_state.jukebox_data, list): st.session_state.jukebox_data = {"hodl": None, "sugi": None}
         
-        # 🚨 URL 링크 깨짐을 막는 완벽한 포매팅 분리 로직
         yt_base_url = "https://" + "www.youtube.com/watch?v="
         
         with st.form("dj_dual"):
@@ -553,7 +585,7 @@ if check_login_and_user():
             g_id = extract_youtube_id(st.session_state.jukebox_data.get("sugi", ""))
             if g_id: st.video(yt_base_url + g_id)
 
-    # 5. 📸 추억저장소 (🚨 아이폰 다중 업로드 완벽 분리 복구 & 갤러리 장바구니 적용)
+    # 5. 📸 추억저장소
     with tabs[4]:
         st.subheader("📸 추억 보관함")
         with st.expander("✨ 새로운 추억 보관하기", expanded=False):
@@ -580,8 +612,6 @@ if check_login_and_user():
                                     if img.mode in ("RGBA", "P"): img = img.convert("RGB")
                                     out = io.BytesIO()
                                     img.save(out, format="JPEG", quality=85)
-                                    
-                                    # f-string URL 파괴를 막기 위한 안전 문자열 생성
                                     safe_filename = f"{selected_date_str}_{user_name_only}_{clean_event_name}_{random.randint(1000, 9999)}.jpg"
                                     if upload_photo_to_drive(out.getvalue(), safe_filename, "image/jpeg"): success_count += 1
                                 except: pass
@@ -615,7 +645,6 @@ if check_login_and_user():
                                     if img.mode in ("RGBA", "P"): img = img.convert("RGB")
                                     out = io.BytesIO()
                                     img.save(out, format="JPEG", quality=85)
-                                    
                                     safe_filename = f"{selected_date_str}_{user_name_only}_{clean_event_name}_{random.randint(1000, 9999)}.jpg"
                                     upload_photo_to_drive(out.getvalue(), safe_filename, "image/jpeg")
                                 except: pass
@@ -666,30 +695,8 @@ if check_login_and_user():
                 save_large_data("time", st.session_state.timeline); st.rerun()
         for t in st.session_state.timeline: st.markdown(f"<div class='card'><b>{t['date']}</b>: {t['event']}</div>", unsafe_allow_html=True)
 
-    # 7. 📍 장소/기록 (🚨 딕셔너리로 단어 추출 안전 픽스 완벽 반영)
+    # 7. 📍 장소/기록 (월간 수기 백서 이동 완료)
     with tabs[6]:
-        st.subheader("📊 월간 수기 백서")
-        this_month = now_kst.strftime("%Y-%m")
-        m_rev = [r for r in st.session_state.reviews if r.get('date','').startswith(this_month)]
-        m_memo = [m for m in st.session_state.memo_history if m.get('date','').startswith(this_month)]
-        
-        st.write(f"📅 **{now_kst.month}월 결산 리포트**")
-        c1, c2 = st.columns(2)
-        c1.metric("데이트", f"{len(m_rev)}회")
-        c2.metric("주고받은 쪽지", f"{len(m_memo)}개")
-        
-        all_text = " ".join([m.get('content', '') for m in m_memo] + [r.get('comment', '') for r in m_rev])
-        words = [w for w in re.findall(r'[가-힣]{2,}', all_text) if len(w) > 1]
-        
-        word_counts = {}
-        for w in words: word_counts[w] = word_counts.get(w, 0) + 1
-        top_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-        
-        if top_words:
-            st.write("🏷️ **우리가 이번 달 많이 쓴 단어:**")
-            st.write(", ".join([f"#{w[0]}" for w in top_words]))
-
-        st.divider()
         st.subheader("📍 우리의 위시리스트")
         with st.form("w_form", clear_on_submit=True):
             w_place = st.text_input("가고 싶은 곳")
