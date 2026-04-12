@@ -224,7 +224,7 @@ def get_image_bytes(file_id):
     return fh.getvalue()
 
 # ==========================================
-# 🚨 로그인 시스템
+# 🚨 로그인 시스템 (원클릭 접속)
 # ==========================================
 def validate_password():
     if st.session_state.pwd_input == "6146":
@@ -347,7 +347,7 @@ if check_login_and_user():
         st.divider()
         if st.button("로그아웃 🚪"): st.session_state.clear(); st.rerun()
 
-    # --- CSS 주입 (span 제외 유지) ---
+    # --- CSS 주입 ---
     st.markdown(f"""
         <div class="custom-bg-layer" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: {bg_color}; z-index: -99999; pointer-events: none;"></div>
         <style>
@@ -386,8 +386,7 @@ if check_login_and_user():
             st.session_state.toast_msg = "공지사항이 성공적으로 변경되었습니다! 📢"; st.rerun()
 
     # ==========================================
-    # 🚨 [v5.0.6 UX 재정렬] 탭 순서 동선 최적화 (요청하신 순서 100% 반영)
-    # 0:데이트 ➔ 1:쪽지함 ➔ 2:텔레파시 ➔ 3:주크박스 ➔ 4:추억저장소 ➔ 5:타임라인 ➔ 6:장소/기록 ➔ 7:타임캡슐 ➔ 8:만능룰렛
+    # 탭 구성
     # ==========================================
     tabs = st.tabs(["💕 데이트", "💌 쪽지함", "🌸 텔레파시", "🎵 주크박스", "📸 추억저장소", "⏳ 타임라인", "📍 장소/기록", "🎁 타임캡슐", "🎡 만능룰렛"])
 
@@ -651,29 +650,36 @@ if check_login_and_user():
             else: st.caption("아직 신청곡이 없습니다.")
 
     # ------------------
-    # 5. 📸 추억 저장소 (🚨 [v5.0.7] 폼 껍데기 박살! 안드로이드 증발 완벽 픽스)
+    # 5. 📸 추억 저장소 (🚨 안드로이드 카메라 버그 완벽 방어: 단일 업로드 분리)
     # ------------------
     with tabs[4]:
         st.subheader("📸 2TB 우리들의 추억 저장소")
         with st.expander("✨ 새로운 추억 보관하기", expanded=False):
-            # 🚨 폼 삭제: 버튼 누르기 전에 메모리에서 증발하는 현상 원천 차단
-            img_files = st.file_uploader("사진을 여러 장 선택해서 올릴 수 있어요!", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+            # 🚨 모바일 브라우저 카메라 튕김 우회 UI
+            upload_mode = st.radio("어떻게 올릴까요?", ["🖼️ 앨범에서 여러 장 고르기", "📸 카메라로 지금 찍기 (안드로이드 권장)"], horizontal=True)
+            
+            if "여러 장" in upload_mode:
+                img_files = st.file_uploader("사진들을 선택해주세요", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+            else:
+                img_file = st.file_uploader("카메라로 찰칵! (1장씩 올라갑니다)", type=["jpg", "png", "jpeg"], accept_multiple_files=False)
+                img_files = [img_file] if img_file else []
+
             col_e1, col_e2 = st.columns([0.4, 0.6])
             with col_e1: event_date_input = st.date_input("언제 있었던 일인가요? 🗓️", value=now_kst.date())
             with col_e2: event_name_input = st.text_input("어떤 추억인가요? ✏️", placeholder="예: 해운대 앞바다")
             
             if st.button("☁️ 2TB 드라이브에 안전하게 업로드"):
                 if img_files:
-                    with st.spinner("구글 드라이브 궁전으로 추억들을 전송하고 있습니다... ⏳ (안드로이드 최적화 모드)"):
+                    with st.spinner("구글 드라이브 궁전으로 추억들을 전송하고 있습니다... ⏳ (압축 최적화 가동)"):
                         clean_event_name = event_name_input.strip().replace("_", " ").replace("/", " ")
                         if not clean_event_name: clean_event_name = "우리의 일상"
                         selected_date_str = str(event_date_input)
                         success_count = 0
                         
-                        for img_file in img_files:
+                        for img_f in img_files:
                             try:
-                                # 🚨 PIL 이미지 압축 엔진 가동 (20MB -> 1MB 이하 압축)
-                                img = Image.open(img_file)
+                                # PIL 엔진 가동 (사진 압축 및 회전 보정)
+                                img = Image.open(img_f)
                                 img = ImageOps.exif_transpose(img)
                                 img.thumbnail((1920, 1920), Image.Resampling.LANCZOS)
                                 if img.mode in ("RGBA", "P"): img = img.convert("RGB")
@@ -687,7 +693,7 @@ if check_login_and_user():
                                 
                                 if upload_photo_to_drive(compressed_bytes, filename, "image/jpeg"): 
                                     success_count += 1
-                                time.sleep(0.3) # 통신 과부하 방지
+                                time.sleep(0.3) 
                                 
                             except Exception as e:
                                 st.error(f"사진 처리 중 에러 발생: {e}")
