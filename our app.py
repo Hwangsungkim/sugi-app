@@ -26,38 +26,26 @@ today_str = str(now_kst.date())
 current_time_str = now_kst.strftime("%H:%M")
 
 # ==========================================
-# 🌤️ 실시간 날씨 (가장 심플하게 이모티콘 1개만 흘러가는 로직)
+# 🌤️ 실시간 날씨 API 연동 (상단 고정 이모티콘)
 # ==========================================
 @st.cache_data(ttl=3600)
 def get_busan_weather():
     try:
         res = requests.get("https://api.open-meteo.com/v1/forecast?latitude=35.1796&longitude=129.0756&current_weather=true", timeout=1.5)
         if res.status_code == 200:
-            code = res.json().get("current_weather", {}).get("weathercode", 0)
-            if code in [51, 53, 55, 61, 63, 65, 67, 80, 81, 82]: return "rain"
-            elif code in [71, 73, 75, 77, 85, 86]: return "snow"
-            elif code in [1, 2, 3]: return "cloud"
-            else: return "sun"
-        return "sun"
-    except: return "sun"
+            cw = res.json().get("current_weather", {})
+            code = cw.get("weathercode", 0)
+            wind = cw.get("windspeed", 0)
+            
+            if wind > 15.0: return "💨"
+            if code in [51, 53, 55, 61, 63, 65, 67, 80, 81, 82]: return "🌧️"
+            elif code in [71, 73, 75, 77, 85, 86]: return "❄️"
+            elif code in [1, 2, 3, 45, 48]: return "☁️"
+            else: return "☀️"
+        return "☀️"
+    except: return "☀️"
 
-weather_type = get_busan_weather()
-
-def show_weather_effect(w_type):
-    if w_type == "cloud":
-        effect_css = ".weather-icon { position: fixed; top: 10vh; left: -20vw; font-size: 6em; opacity: 0.7; z-index: 9999; pointer-events: none; animation: drift 35s linear infinite; } @keyframes drift { to { transform: translateX(120vw); } }"
-        divs = "<div class='weather-icon'>☁️</div>"
-    elif w_type == "sun":
-        effect_css = ".weather-icon { position: fixed; top: 5vh; left: -20vw; font-size: 5em; opacity: 0.6; z-index: 9999; pointer-events: none; animation: drift_spin 40s linear infinite; } @keyframes drift_spin { to { transform: translateX(120vw) rotate(18deg); } }"
-        divs = "<div class='weather-icon'>✨</div>"
-    elif w_type == "rain":
-        effect_css = ".weather-icon { position: fixed; top: -10vh; left: 40vw; font-size: 4em; opacity: 0.7; z-index: 9999; pointer-events: none; animation: fall 3s linear infinite; } @keyframes fall { to { transform: translateY(110vh); } }"
-        divs = "<div class='weather-icon'>💧</div>"
-    else:
-        effect_css = ".weather-icon { position: fixed; top: -10vh; left: 50vw; font-size: 4em; opacity: 0.8; z-index: 9999; pointer-events: none; animation: fall_snow 6s linear infinite; } @keyframes fall_snow { to { transform: translateY(110vh) translateX(30px); } }"
-        divs = "<div class='weather-icon'>❄️</div>"
-    
-    st.markdown(f"<style>{effect_css}</style><div aria-hidden='true'>{divs}</div>", unsafe_allow_html=True)
+weather_emoji = get_busan_weather()
 
 # --- 🍎 아이폰 전용 홈 화면 아이콘 ---
 components.html("""<script>const link = window.parent.document.createElement('link'); link.rel = 'apple-touch-icon'; link.href = 'https://cdn-icons-png.flaticon.com/512/833/833472.png'; window.parent.document.head.appendChild(link);</script>""", height=0, width=0)
@@ -93,7 +81,6 @@ def extract_youtube_id(url):
     match = re.search(r'(?:v=|\/|be\/|embed\/)([0-9A-Za-z_-]{11})', url)
     return match.group(1) if match else None
 
-# 🚨 [사진 증발 원인 완벽 차단] 드라이브 폴더 ID 경로 3중 파싱 (절대 건드리지 않음)
 DRIVE_FOLDER_ID = st.secrets.get("DRIVE_FOLDER_ID") or st.secrets.get("google_auth", {}).get("DRIVE_FOLDER_ID") or ""
 
 def get_drive_service():
@@ -227,16 +214,15 @@ if check_login_and_user():
         </style>
     """, unsafe_allow_html=True)
 
-    # 🔥 날씨 이펙트 호출
-    show_weather_effect(weather_type)
+    # 🔥 날씨 상단 우측 고정 이모티콘
+    st.markdown(f"<div style='position: fixed; top: 15px; right: 20px; font-size: 2.5rem; z-index: 99999;'>{weather_emoji}</div>", unsafe_allow_html=True)
 
     # ==========================================
-    # 🌱 사이드바 완벽 복구
+    # 🌱 사이드바 
     # ==========================================
     total_act = len(st.session_state.memo_history) + len(st.session_state.timeline) + len(st.session_state.reviews)
     level, tree_icon = ("풍성한 나무", "🍎") if total_act >= 70 else (("아기 나무", "🌳") if total_act >= 30 else (("새싹", "🌿") if total_act >= 10 else ("씨앗", "🌱")))
     
-    # 🚨 배지 시스템
     badges = []
     if len(st.session_state.memo_history) >= 10: badges.append("📝 편지왕")
     if len(st.session_state.reviews) >= 5: badges.append("🍽️ 미슐랭")
@@ -304,7 +290,6 @@ if check_login_and_user():
             with st.expander("열어보기"):
                 for p in past_records: st.info(f"[{p['date']}] {p['user']}: {p['content']}")
 
-        # 🚨 80개 문답 + 남/여 색상 구분 완벽 복구
         qna_list = [
             "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?", "3. 내가 가장 사랑스러워 보일 때는 언제야?", "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?", "5. 지금 당장 훌쩍 떠난다면 같이 가고 싶은 여행지는?",
             "6. 지금까지 우리의 가장 완벽했던 데이트는 언제였어?", "7. 우리의 첫 키스(뽀뽀) 때 어떤 기분이었어?", "8. 내가 해준 음식 중 최고의 메뉴는?", "9. 서로의 연락처 저장명과 그렇게 정한 이유는 뭐야?", "10. 화났을 때 내 기분을 100% 풀어주는 최고의 방법은?",
@@ -330,14 +315,26 @@ if check_login_and_user():
             st.subheader(qna_list[q_idx])
             ans_b = st.session_state.qna_data[q_key]["hodl"]; ans_g = st.session_state.qna_data[q_key]["sugi"]
             c1, c2 = st.columns(2)
+            
+            # 🚨 문답 상대방 작성 상태 표시 및 작성 폼 분기 처리
             with c1:
                 st.markdown("<div class='user-boy' style='padding:8px; border-radius:8px; margin-bottom:5px;'>👦 <b>남친</b></div>", unsafe_allow_html=True)
-                if user_name_only == "수기남자친구": n_ans_b = st.text_area("작성", value=ans_b, key="q_b", label_visibility="collapsed")
-                else: st.info(ans_b if (ans_b and ans_g) else "🔒 작성 대기 중")
+                if user_name_only == "수기남자친구":
+                    n_ans_b = st.text_area("작성", value=ans_b, key="q_b", label_visibility="collapsed")
+                else:
+                    if ans_b and ans_g: st.info(ans_b)
+                    elif ans_b and not ans_g: st.success("🔒 상대가 답을 작성했습니다!")
+                    else: st.warning("⏳ 아직 작성하지 않았습니다.")
+            
             with c2:
                 st.markdown("<div class='user-girl' style='padding:8px; border-radius:8px; margin-bottom:5px;'>👩 <b>수기</b></div>", unsafe_allow_html=True)
-                if user_name_only == "수기": n_ans_g = st.text_area("작성", value=ans_g, key="q_g", label_visibility="collapsed")
-                else: st.info(ans_g if (ans_b and ans_g) else "🔒 작성 대기 중")
+                if user_name_only == "수기":
+                    n_ans_g = st.text_area("작성", value=ans_g, key="q_g", label_visibility="collapsed")
+                else:
+                    if ans_b and ans_g: st.info(ans_g)
+                    elif ans_g and not ans_b: st.success("🔒 상대가 답을 작성했습니다!")
+                    else: st.warning("⏳ 아직 작성하지 않았습니다.")
+
             if st.button("답변 저장 💾"):
                 if user_name_only == "수기남자친구": st.session_state.qna_data[q_key]["hodl"] = n_ans_b
                 else: st.session_state.qna_data[q_key]["sugi"] = n_ans_g
@@ -382,13 +379,26 @@ if check_login_and_user():
             with st.expander(f"📌 {s['date']} {s['plan']}"):
                 if st.button("삭제", key=f"ds_{i}"): st.session_state.date_schedules.pop(i); save_large_data("date", st.session_state.date_schedules); st.rerun()
 
-    # 2. 💌 쪽지함
+    # 2. 💌 쪽지함 (🚨 1일 1회 업데이트 로직 적용)
     with tabs[1]:
         st.subheader("💌 오늘의 한마디")
         content = st.text_area("마음 전하기", key="memo_in")
         if st.button("보내기 ✈️") and content:
-            st.session_state.memo_history.insert(0, {"date": today_str, "time": current_time_str, "user": user_name_only, "content": content})
+            existing_idx = -1
+            for idx, m in enumerate(st.session_state.memo_history):
+                if m.get('date') == today_str and m.get('user') == user_name_only:
+                    existing_idx = idx
+                    break
+            
+            if existing_idx != -1:
+                st.session_state.memo_history[existing_idx]['content'] = content
+                st.session_state.memo_history[existing_idx]['time'] = current_time_str
+                st.toast("오늘의 쪽지가 수정되었습니다! ✏️")
+            else:
+                st.session_state.memo_history.insert(0, {"date": today_str, "time": current_time_str, "user": user_name_only, "content": content})
+                st.toast("오늘의 쪽지가 등록되었습니다! ✈️")
             save_large_data("memo", st.session_state.memo_history); st.rerun()
+            
         for m in st.session_state.memo_history[:st.session_state.memo_limit]:
             cls = "user-boy" if "남자친구" in m.get('user','') else "user-girl"
             st.markdown(f"<div class='card {cls}'><b>{m.get('user','')}</b> | {m.get('date','')}<br>{m.get('content','')}</div>", unsafe_allow_html=True)
@@ -448,7 +458,7 @@ if check_login_and_user():
             if g_id: st.video(yt_safe + g_id)
             else: st.info("아직 신청한 곡이 없어요!")
 
-    # 5. 📸 추억저장소 🚨 [사진 폴더 로직 100% 복구] 🚨
+    # 5. 📸 추억저장소
     with tabs[4]:
         st.subheader("📸 추억 보관함")
         with st.expander("✨ 새로운 추억 보관하기"):
@@ -585,7 +595,7 @@ if check_login_and_user():
             else:
                 st.warning(f"🔒 [잠김] {cap.get('title')} ({cap.get('open_date')} 개봉 예정)")
 
-    # 9. 🎡 만능 룰렛 🚨 [메뉴 리스트 연동형 완전체 복구] 🚨
+    # 9. 🎡 만능 룰렛
     with tabs[8]:
         st.subheader("🎡 결정장애 해결사 (메뉴 룰렛)")
         
