@@ -111,20 +111,34 @@ def delete_photo_from_drive(file_id):
     except: return False
 
 # ==========================================
-# ⚡️ 데이터 엔진
+# ⚡️ 데이터 엔진 (🚨 용량 초과 방지 무한 청크 시스템 + 동기화 방어막 도입)
 # ==========================================
+def get_chunked_data(sheet_obj, default_val):
+    """구글 시트 5만자 제한을 우회하여 A2부터 여러 셀로 분산된 데이터를 완벽하게 조립하는 엔진"""
+    if not sheet_obj: return default_val
+    try:
+        vals = sheet_obj.col_values(1)
+        if not vals: return default_val
+        # 분산(청크) 저장된 데이터가 존재할 경우 조립
+        if len(vals) > 1 and (vals[1].startswith('{') or vals[1].startswith('[')):
+            return json.loads("".join(vals[1:]))
+        # 구버전 단일셀(A1)에 저장된 데이터 자동 마이그레이션 읽기
+        if vals[0].startswith('{') or vals[0].startswith('['):
+            return json.loads(vals[0])
+        return default_val
+    except: return default_val
+
+def save_large_data(sheet_key, data):
+    """모든 데이터를 무한히 긴 JSON 청크로 쪼개어 A2부터 안전하게 분산 저장하는 엔진"""
+    if services and services.get(sheet_key):
+        json_str = json.dumps(data)
+        chunks = [json_str[i:i+40000] for i in range(0, len(json_str), 40000)]
+        cell_values = [[chunk] for chunk in chunks]
+        services[sheet_key].batch_clear(['A2:A'])
+        services[sheet_key].update(values=cell_values, range_name='A2', value_input_option='RAW')
+
 def load_data():
-    try: val = services["main"].acell('A1').value
-    except: val = None
-    main_data = json.loads(val) if val else {}
-    def get_large_data(sheet_obj):
-        if not sheet_obj: return []
-        try: vals = sheet_obj.col_values(1)[1:]; return json.loads("".join(vals)) if vals else []
-        except: return []
-    def get_json_cell(sheet_obj, default_val):
-        if not sheet_obj: return default_val
-        try: val = sheet_obj.acell('A1').value; return json.loads(val) if val else default_val
-        except: return default_val
+    main_data = get_chunked_data(services["main"], {})
     return {
         "notice": main_data.get("notice", "오늘 하루도 화이팅! ✨"),
         "promises": main_data.get("promises", [{"text": "서운한 건 그날 바로 말하기 🗣️", "by": "수기남자친구"}]),
@@ -132,28 +146,16 @@ def load_data():
         "mood_history": main_data.get("mood_history", []),
         "current_mood_date": main_data.get("current_mood_date", today_str),
         "menu_list": main_data.get("menu_list", ["삼겹살", "초밥"]),
-        "memo_history": get_large_data(services["memo"]),
-        "timeline": get_large_data(services["time"]),
-        "date_schedules": get_large_data(services["date"]),
-        "wishlist": get_large_data(services["wish"]),
-        "reviews": get_large_data(services["review"]),
-        "qna_data": get_json_cell(services["qna"], {}),
-        "time_capsules": get_json_cell(services["capsule"], []),
-        "tele_data": get_json_cell(services["tele"], {}),
-        "jukebox_data": get_json_cell(services["jukebox"], {"hodl": None, "sugi": None}) 
+        "memo_history": get_chunked_data(services["memo"], []),
+        "timeline": get_chunked_data(services["time"], []),
+        "date_schedules": get_chunked_data(services["date"], []),
+        "wishlist": get_chunked_data(services["wish"], []),
+        "reviews": get_chunked_data(services["review"], []),
+        "qna_data": get_chunked_data(services["qna"], {}),
+        "time_capsules": get_chunked_data(services["capsule"], []),
+        "tele_data": get_chunked_data(services["tele"], {}),
+        "jukebox_data": get_chunked_data(services["jukebox"], {"hodl": None, "sugi": None})
     }
-
-def save_data_to_cell(sheet_key, data):
-    if services and services.get(sheet_key): services[sheet_key].update_acell('A1', json.dumps(data))
-
-def save_large_data(sheet_key, data_list):
-    if services and services.get(sheet_key):
-        json_str = json.dumps(data_list); chunks = [json_str[i:i+40000] for i in range(0, len(json_str), 40000)]
-        cell_values = [[chunk] for chunk in chunks]; services[sheet_key].batch_clear(['A2:A'])
-        services[sheet_key].update(values=cell_values, range_name='A2', value_input_option='RAW')
-
-def save_main_data():
-    save_data_to_cell("main", {"notice": st.session_state.notice, "promises": st.session_state.promises, "moods": st.session_state.moods, "mood_history": st.session_state.mood_history, "current_mood_date": st.session_state.current_mood_date, "menu_list": st.session_state.menu_list})
 
 # ==========================================
 # 🔐 자동 로그인
@@ -189,7 +191,14 @@ if check_login_and_user():
         saved = load_data()
         for k, v in saved.items(): st.session_state[k] = v
         st.session_state['data_loaded'] = True; st.session_state.photo_limit = 20; st.session_state.memo_limit = 10; st.session_state.review_limit = 10; st.session_state.photo_cart = []
-        if st.session_state.current_mood_date != today_str: st.session_state.moods = {"수기남자친구": "🙂", "수기": "🙂"}; st.session_state.current_mood_date = today_str; save_main_data()
+        if st.session_state.current_mood_date != today_str: st.session_state.moods = {"수기남자친구": "🙂", "수기": "🙂"}; st.session_state.current_mood_date = today_str; 
+        
+        # 접속 시 날짜가 달라 기분을 초기화해야 하면 메인 데이터 최신화 후 저장
+        if st.session_state.current_mood_date != today_str:
+            rm = get_chunked_data(services["main"], {})
+            rm["moods"] = {"수기남자친구": "🙂", "수기": "🙂"}
+            rm["current_mood_date"] = today_str
+            save_large_data("main", rm)
 
     # 🎨 [디자인 고정] 24시간 파스텔 테마 및 명도 가독성 확보
     bg_color = "#FFF5F7" if user_name_only == "수기" else "#E3F2FD"
@@ -259,10 +268,30 @@ if check_login_and_user():
         for i, p in enumerate(st.session_state.promises):
             col_p1, col_p2 = st.columns([0.8, 0.2])
             col_p1.write(f"{i+1}. {p['text'] if isinstance(p, dict) else p}")
-            if col_p2.button("X", key=f"del_p_{i}"): st.session_state.promises.pop(i); save_main_data(); st.rerun()
+            if col_p2.button("X", key=f"del_p_{i}"): 
+                # 🚨 데이터 증발 100% 방지: 즉시 스캔 후 타겟만 정밀 삭제
+                target_p_text = p['text'] if isinstance(p, dict) else p
+                rm = get_chunked_data(services["main"], {})
+                rp = rm.get("promises", [])
+                for idx, rem_p in enumerate(rp):
+                    rem_p_text = rem_p['text'] if isinstance(rem_p, dict) else rem_p
+                    if rem_p_text == target_p_text:
+                        rp.pop(idx); break
+                rm["promises"] = rp
+                st.session_state.promises = rp
+                save_large_data("main", rm)
+                st.rerun()
+                
         with st.expander("약속 추가하기 ✍️"):
             new_p = st.text_input("새로운 다짐", key="side_p_in")
-            if st.button("저장", key="side_p_btn") and new_p: st.session_state.promises.append({"text": new_p, "by": user_name_only}); save_main_data(); st.rerun()
+            if st.button("저장", key="side_p_btn") and new_p: 
+                rm = get_chunked_data(services["main"], {})
+                rp = rm.get("promises", [])
+                rp.append({"text": new_p, "by": user_name_only})
+                rm["promises"] = rp
+                st.session_state.promises = rp
+                save_large_data("main", rm)
+                st.rerun()
         st.divider()
         if st.button("로그아웃 🚪", use_container_width=True): st.query_params.clear(); st.session_state.clear(); st.rerun()
 
@@ -274,10 +303,15 @@ if check_login_and_user():
     st.success(f"📢 {st.session_state.notice}")
     with st.expander("✏️ 공지 수정"):
         new_notice = st.text_input("공지 내용", value=st.session_state.notice)
-        if st.button("공지 확정"): st.session_state.notice = new_notice; save_main_data(); st.rerun()
+        if st.button("공지 확정"): 
+            rm = get_chunked_data(services["main"], {})
+            rm["notice"] = new_notice
+            st.session_state.notice = new_notice
+            save_large_data("main", rm)
+            st.rerun()
 
     # ==========================================
-    # 🚨 9개 탭 구성
+    # 🚨 9개 탭 구성 (모든 기능에 동기화 방어막 적용 완료)
     # ==========================================
     tabs = st.tabs(["💕 데이트", "💌 쪽지함", "🌸 텔레파시", "🎵 주크박스", "📸 추억저장소", "⏳ 타임라인", "📍 장소/기록", "🎁 타임캡슐", "🎡 만능룰렛"])
 
@@ -315,7 +349,6 @@ if check_login_and_user():
             ans_b = st.session_state.qna_data[q_key]["hodl"]; ans_g = st.session_state.qna_data[q_key]["sugi"]
             c1, c2 = st.columns(2)
             
-            # 🚨 문답 원상 복구 및 안내 텍스트만 적용
             with c1:
                 st.markdown("<div class='user-boy' style='padding:8px; border-radius:8px; margin-bottom:5px;'>👦 <b>수기남자친구</b></div>", unsafe_allow_html=True)
                 if user_name_only == "수기남자친구":
@@ -335,9 +368,14 @@ if check_login_and_user():
                     else: st.warning("⏳ 아직 작성하지 않았습니다.")
 
             if st.button("답변 저장 💾"):
-                if user_name_only == "수기남자친구": st.session_state.qna_data[q_key]["hodl"] = n_ans_b
-                else: st.session_state.qna_data[q_key]["sugi"] = n_ans_g
-                save_data_to_cell("qna", st.session_state.qna_data); st.rerun()
+                # 🚨 데이터 증발 차단: 즉시 Fetch 후 내 답변만 끼워넣기
+                remote_qna = get_chunked_data(services["qna"], {})
+                if q_key not in remote_qna: remote_qna[q_key] = {"hodl": "", "sugi": ""}
+                if user_name_only == "수기남자친구": remote_qna[q_key]["hodl"] = n_ans_b
+                else: remote_qna[q_key]["sugi"] = n_ans_g
+                st.session_state.qna_data = remote_qna
+                save_large_data("qna", remote_qna)
+                st.rerun()
 
         st.divider()
         st.subheader("🎭 오늘 우리의 기분 점수")
@@ -346,15 +384,26 @@ if check_login_and_user():
         
         my_mood = st.select_slider(f"{user_name_only}의 기분 선택", options=mood_opts, value=st.session_state.moods.get(user_name_only, "🙂"))
         if st.button("기분 업데이트 ✨"):
-            st.session_state.moods[user_name_only] = my_mood
+            rm = get_chunked_data(services["main"], {})
+            r_moods = rm.get("moods", {"수기남자친구": "🙂", "수기": "🙂"})
+            r_hist = rm.get("mood_history", [])
+            
+            r_moods[user_name_only] = my_mood
             m_score = {"😢": 1, "☁️": 2, "🙂": 3, "🥰": 4, "🔥": 5}
-            today_rec = next((item for item in st.session_state.mood_history if item["date"] == today_str), None)
+            today_rec = next((item for item in r_hist if item["date"] == today_str), None)
             if today_rec: today_rec[f"{user_name_only}_score"] = m_score[my_mood]
             else:
-                new_rec = {"date": today_str, "수기남자친구_score": m_score[st.session_state.moods.get("수기남자친구", "🙂")], "수기_score": m_score[st.session_state.moods.get("수기", "🙂")]}
+                new_rec = {"date": today_str, "수기남자친구_score": m_score[r_moods.get("수기남자친구", "🙂")], "수기_score": m_score[r_moods.get("수기", "🙂")]}
                 new_rec[f"{user_name_only}_score"] = m_score[my_mood]
-                st.session_state.mood_history.append(new_rec)
-            save_main_data(); st.rerun()
+                r_hist.append(new_rec)
+                
+            rm["moods"] = r_moods
+            rm["mood_history"] = r_hist
+            rm["current_mood_date"] = today_str
+            st.session_state.moods = r_moods
+            st.session_state.mood_history = r_hist
+            save_large_data("main", rm)
+            st.rerun()
 
         b_md = st.session_state.moods.get('수기남자친구', '🙂')
         g_md = st.session_state.moods.get('수기', '🙂')
@@ -373,30 +422,41 @@ if check_login_and_user():
         with st.form("sch_form", clear_on_submit=True):
             sd = st.date_input("날짜"); sp = st.text_input("어디서 무얼 할까요?")
             if st.form_submit_button("일정 추가") and sp:
-                st.session_state.date_schedules.append({"date": str(sd), "plan": sp, "by": user_name_only}); save_large_data("date", st.session_state.date_schedules); st.rerun()
+                remote_d = get_chunked_data(services["date"], [])
+                remote_d.append({"date": str(sd), "plan": sp, "by": user_name_only})
+                st.session_state.date_schedules = remote_d
+                save_large_data("date", remote_d); st.rerun()
         for i, s in enumerate(st.session_state.date_schedules):
             with st.expander(f"📌 {s['date']} {s['plan']}"):
-                if st.button("삭제", key=f"ds_{i}"): st.session_state.date_schedules.pop(i); save_large_data("date", st.session_state.date_schedules); st.rerun()
+                if st.button("삭제", key=f"ds_{i}"): 
+                    target_s = s
+                    remote_d = get_chunked_data(services["date"], [])
+                    for idx, rem_s in enumerate(remote_d):
+                        if rem_s.get('date') == target_s['date'] and rem_s.get('plan') == target_s['plan']:
+                            remote_d.pop(idx); break
+                    st.session_state.date_schedules = remote_d
+                    save_large_data("date", remote_d); st.rerun()
 
-    # 2. 💌 쪽지함 (🚨 휴지통 삭제 및 1일 1회 업데이트 로직)
+    # 2. 💌 쪽지함
     with tabs[1]:
         st.subheader("💌 오늘의 한마디")
         content = st.text_area("마음 전하기", key="memo_in")
         if st.button("보내기 ✈️") and content:
+            remote_m = get_chunked_data(services["memo"], [])
             existing_idx = -1
-            for idx, m in enumerate(st.session_state.memo_history):
+            for idx, m in enumerate(remote_m):
                 if m.get('date') == today_str and m.get('user') == user_name_only:
-                    existing_idx = idx
-                    break
+                    existing_idx = idx; break
             
             if existing_idx != -1:
-                st.session_state.memo_history[existing_idx]['content'] = content
-                st.session_state.memo_history[existing_idx]['time'] = current_time_str
+                remote_m[existing_idx]['content'] = content
+                remote_m[existing_idx]['time'] = current_time_str
                 st.toast("오늘의 쪽지가 수정되었습니다! ✏️")
             else:
-                st.session_state.memo_history.insert(0, {"date": today_str, "time": current_time_str, "user": user_name_only, "content": content})
+                remote_m.insert(0, {"date": today_str, "time": current_time_str, "user": user_name_only, "content": content})
                 st.toast("오늘의 쪽지가 등록되었습니다! ✈️")
-            save_large_data("memo", st.session_state.memo_history); st.rerun()
+            st.session_state.memo_history = remote_m
+            save_large_data("memo", remote_m); st.rerun()
             
         for m in st.session_state.memo_history[:st.session_state.memo_limit]:
             cls = "user-boy" if "수기남자친구" in m.get('user','') else "user-girl"
@@ -424,9 +484,17 @@ if check_login_and_user():
         ans = st.session_state.tele_data[today_str]["hodl" if user_name_only == "수기남자친구" else "sugi"]
         c1, c2 = st.columns(2)
         if c1.button(q_pair[0], use_container_width=True, type="primary" if ans == q_pair[0] else "secondary"):
-            st.session_state.tele_data[today_str]["hodl" if user_name_only == "수기남자친구" else "sugi"] = q_pair[0]; save_data_to_cell("tele", st.session_state.tele_data); st.rerun()
+            remote_t = get_chunked_data(services["tele"], {})
+            if today_str not in remote_t: remote_t[today_str] = {"hodl": None, "sugi": None}
+            remote_t[today_str]["hodl" if user_name_only == "수기남자친구" else "sugi"] = q_pair[0]
+            st.session_state.tele_data = remote_t
+            save_large_data("tele", remote_t); st.rerun()
         if c2.button(q_pair[1], use_container_width=True, type="primary" if ans == q_pair[1] else "secondary"):
-            st.session_state.tele_data[today_str]["hodl" if user_name_only == "수기남자친구" else "sugi"] = q_pair[1]; save_data_to_cell("tele", st.session_state.tele_data); st.rerun()
+            remote_t = get_chunked_data(services["tele"], {})
+            if today_str not in remote_t: remote_t[today_str] = {"hodl": None, "sugi": None}
+            remote_t[today_str]["hodl" if user_name_only == "수기남자친구" else "sugi"] = q_pair[1]
+            st.session_state.tele_data = remote_t
+            save_large_data("tele", remote_t); st.rerun()
         
         b_ans = st.session_state.tele_data[today_str].get("hodl"); g_ans = st.session_state.tele_data[today_str].get("sugi")
         if b_ans and g_ans:
@@ -443,7 +511,11 @@ if check_login_and_user():
         with st.form("dj_dual"):
             link = st.text_input("유튜브 링크")
             if st.form_submit_button("내 곡 신청하기 🎧"):
-                st.session_state.jukebox_data["hodl" if user_name_only == "수기남자친구" else "sugi"] = link; save_data_to_cell("jukebox", st.session_state.jukebox_data); st.rerun()
+                remote_j = get_chunked_data(services["jukebox"], {"hodl": None, "sugi": None})
+                if isinstance(remote_j, list): remote_j = {"hodl": None, "sugi": None}
+                remote_j["hodl" if user_name_only == "수기남자친구" else "sugi"] = link
+                st.session_state.jukebox_data = remote_j
+                save_large_data("jukebox", remote_j); st.rerun()
         
         cb, cg = st.columns(2)
         with cb:
@@ -524,7 +596,10 @@ if check_login_and_user():
         with st.form("t_form", clear_on_submit=True):
             td = st.date_input("날짜"); te = st.text_input("사건")
             if st.form_submit_button("기록"):
-                st.session_state.timeline.insert(0, {"date": str(td), "event": te, "by": user_name_only}); save_large_data("time", st.session_state.timeline); st.rerun()
+                remote_t = get_chunked_data(services["time"], [])
+                remote_t.insert(0, {"date": str(td), "event": te, "by": user_name_only})
+                st.session_state.timeline = remote_t
+                save_large_data("time", remote_t); st.rerun()
         for t in st.session_state.timeline:
             st.markdown(f"<div class='card'><b>{t.get('date','')}</b>: {t.get('event','')}</div>", unsafe_allow_html=True)
 
@@ -534,14 +609,29 @@ if check_login_and_user():
         with st.form("w_form", clear_on_submit=True):
             wp = st.text_input("가고 싶은 곳")
             if st.form_submit_button("추가"):
-                st.session_state.wishlist.append({"place": wp, "visited": False, "by": user_name_only}); save_large_data("wish", st.session_state.wishlist); st.rerun()
+                remote_w = get_chunked_data(services["wish"], [])
+                remote_w.append({"place": wp, "visited": False, "by": user_name_only})
+                st.session_state.wishlist = remote_w
+                save_large_data("wish", remote_w); st.rerun()
         for i, w in enumerate(st.session_state.wishlist):
             v = w.get('visited', False)
             with st.expander(f"{'✅' if v else '📍'} {w.get('place','')}"):
                 if st.checkbox("다녀왔어요!", value=v, key=f"chk_{i}") != v:
-                    st.session_state.wishlist[i]['visited'] = not v; save_large_data("wish", st.session_state.wishlist); st.rerun()
+                    target_place = w.get('place')
+                    remote_w = get_chunked_data(services["wish"], [])
+                    for idx, rem_w in enumerate(remote_w):
+                        if rem_w.get('place') == target_place:
+                            remote_w[idx]['visited'] = not v; break
+                    st.session_state.wishlist = remote_w
+                    save_large_data("wish", remote_w); st.rerun()
                 if st.button("삭제", key=f"del_w_{i}"):
-                    st.session_state.wishlist.pop(i); save_large_data("wish", st.session_state.wishlist); st.rerun()
+                    target_place = w.get('place')
+                    remote_w = get_chunked_data(services["wish"], [])
+                    for idx, rem_w in enumerate(remote_w):
+                        if rem_w.get('place') == target_place:
+                            remote_w.pop(idx); break
+                    st.session_state.wishlist = remote_w
+                    save_large_data("wish", remote_w); st.rerun()
         
         st.divider()
         st.subheader("📝 데이트 후기")
@@ -552,8 +642,10 @@ if check_login_and_user():
             r_rating = st.selectbox("별점 ⭐", ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"])
             r_comment = st.text_area("후기 내용 📝")
             if st.form_submit_button("후기 등록"):
-                st.session_state.reviews.insert(0, {"name": r_name, "cat": r_cat, "rating": r_rating, "comment": r_comment, "date": str(r_date), "by": user_name_only, "comments": []})
-                save_large_data("review", st.session_state.reviews); st.rerun()
+                remote_r = get_chunked_data(services["review"], [])
+                remote_r.insert(0, {"name": r_name, "cat": r_cat, "rating": r_rating, "comment": r_comment, "date": str(r_date), "by": user_name_only, "comments": []})
+                st.session_state.reviews = remote_r
+                save_large_data("review", remote_r); st.rerun()
         
         for i, r in enumerate(st.session_state.reviews):
             with st.container():
@@ -569,15 +661,35 @@ if check_login_and_user():
                     st.markdown(f"<div class='review-comment'><b>{c.get('user')}</b>: {c.get('text')}</div>", unsafe_allow_html=True)
                     if c.get('user') == user_name_only:
                         if st.button("❌ 내 댓글 삭제", key=f"dc_{i}_{c_idx}"):
-                            r["comments"].pop(c_idx); save_large_data("review", st.session_state.reviews); st.rerun()
+                            target_name = r.get('name'); target_date = r.get('date')
+                            remote_r = get_chunked_data(services["review"], [])
+                            for idx, rem_r in enumerate(remote_r):
+                                if rem_r.get('name') == target_name and rem_r.get('date') == target_date:
+                                    if c_idx < len(rem_r.get("comments", [])): rem_r["comments"].pop(c_idx)
+                                    break
+                            st.session_state.reviews = remote_r
+                            save_large_data("review", remote_r); st.rerun()
                 
                 with st.expander("💬 댓글 남기기 / 원본 관리"):
                     nc = st.text_input("댓글 쓰기", key=f"nc_{i}")
                     if st.button("전송", key=f"nb_{i}"):
-                        r["comments"].append({"user": user_name_only, "text": nc}); save_large_data("review", st.session_state.reviews); st.rerun()
+                        target_name = r.get('name'); target_date = r.get('date')
+                        remote_r = get_chunked_data(services["review"], [])
+                        for idx, rem_r in enumerate(remote_r):
+                            if rem_r.get('name') == target_name and rem_r.get('date') == target_date:
+                                rem_r.setdefault("comments", []).append({"user": user_name_only, "text": nc})
+                                break
+                        st.session_state.reviews = remote_r
+                        save_large_data("review", remote_r); st.rerun()
                     if r.get('by') == user_name_only:
                         if st.button("🗑️ 후기 원본 삭제", key=f"rb_{i}"):
-                            st.session_state.reviews.pop(i); save_large_data("review", st.session_state.reviews); st.rerun()
+                            target_name = r.get('name'); target_date = r.get('date')
+                            remote_r = get_chunked_data(services["review"], [])
+                            for idx, rem_r in enumerate(remote_r):
+                                if rem_r.get('name') == target_name and rem_r.get('date') == target_date:
+                                    remote_r.pop(idx); break
+                            st.session_state.reviews = remote_r
+                            save_large_data("review", remote_r); st.rerun()
 
     # 8. 🎁 타임캡슐
     with tabs[7]:
@@ -585,12 +697,22 @@ if check_login_and_user():
         with st.form("cap_form"):
             ct = st.text_input("제목"); cd = st.date_input("열어볼 날짜", min_value=now_kst.date() + datetime.timedelta(days=1)); cc = st.text_area("내용")
             if st.form_submit_button("⛏️ 묻기"):
-                st.session_state.time_capsules.append({"title": ct, "open_date": str(cd), "content": cc, "by": user_name_only}); save_data_to_cell("capsule", st.session_state.time_capsules); st.rerun()
+                remote_c = get_chunked_data(services["capsule"], [])
+                remote_c.append({"title": ct, "open_date": str(cd), "content": cc, "by": user_name_only})
+                st.session_state.time_capsules = remote_c
+                save_large_data("capsule", remote_c); st.rerun()
         for i, cap in enumerate(st.session_state.time_capsules):
             if today_str >= cap.get('open_date', ''):
                 with st.expander(f"🎉 [열림] {cap.get('title')}"):
                     st.write(cap.get('content'))
-                    if st.button("🗑️ 삭제", key=f"del_cap_{i}"): st.session_state.time_capsules.pop(i); save_data_to_cell("capsule", st.session_state.time_capsules); st.rerun()
+                    if st.button("🗑️ 삭제", key=f"del_cap_{i}"): 
+                        target_title = cap.get('title')
+                        remote_c = get_chunked_data(services["capsule"], [])
+                        for idx, rem_c in enumerate(remote_c):
+                            if rem_c.get('title') == target_title:
+                                remote_c.pop(idx); break
+                        st.session_state.time_capsules = remote_c
+                        save_large_data("capsule", remote_c); st.rerun()
             else:
                 st.warning(f"🔒 [잠김] {cap.get('title')} ({cap.get('open_date')} 개봉 예정)")
 
@@ -601,19 +723,25 @@ if check_login_and_user():
         with st.form("roulette_form", clear_on_submit=True):
             new_menu = st.text_input("새로운 메뉴/선택지 추가")
             if st.form_submit_button("추가") and new_menu:
-                if new_menu not in st.session_state.menu_list:
-                    st.session_state.menu_list.append(new_menu)
-                    save_main_data()
-                    st.rerun()
+                rm = get_chunked_data(services["main"], {})
+                r_menu = rm.get("menu_list", [])
+                if new_menu not in r_menu:
+                    r_menu.append(new_menu)
+                    rm["menu_list"] = r_menu
+                    st.session_state.menu_list = r_menu
+                    save_large_data("main", rm); st.rerun()
 
         st.write("🍽️ **현재 등록된 메뉴 후보**")
         for i, menu in enumerate(st.session_state.menu_list):
             col_m1, col_m2 = st.columns([0.8, 0.2])
             col_m1.write(f"- {menu}")
             if col_m2.button("❌", key=f"del_menu_{i}"):
-                st.session_state.menu_list.pop(i)
-                save_main_data()
-                st.rerun()
+                rm = get_chunked_data(services["main"], {})
+                r_menu = rm.get("menu_list", [])
+                if menu in r_menu: r_menu.remove(menu)
+                rm["menu_list"] = r_menu
+                st.session_state.menu_list = r_menu
+                save_large_data("main", rm); st.rerun()
                 
         st.divider()
         
