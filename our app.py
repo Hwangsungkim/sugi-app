@@ -195,7 +195,7 @@ if check_login_and_user():
             rm["current_mood_date"] = today_str
             save_large_data("main", rm)
 
-    # 🎨 [디자인 고정] 24시간 파스텔 테마
+    # 🎨 [디자인 고정] 24시간 파스텔 테마 및 명도 가독성 확보
     bg_color = "#FFF5F7" if user_name_only == "수기" else "#E3F2FD"
     accent_color = "#FF85A2" if user_name_only == "수기" else "#4B89FF"
     text_color = "#333333"
@@ -457,6 +457,7 @@ if check_login_and_user():
             for idx, m in enumerate(remote_m):
                 if m.get('date') == today_str and m.get('user') == user_name_only:
                     existing_idx = idx; break
+            
             if existing_idx != -1:
                 remote_m[existing_idx]['content'] = content
                 remote_m[existing_idx]['time'] = current_time_str
@@ -607,7 +608,7 @@ if check_login_and_user():
         if len(photos) >= st.session_state.photo_limit:
             if st.button("⬇️ 과거 사진 더 보기"): st.session_state.photo_limit += 20; st.rerun()
 
-    # 6. ⏳ 타임라인 (🚨 수정 완료: 무조건 날짜 최신순 강제 정렬)
+    # 6. ⏳ 타임라인 (🚨 수정/삭제 기능 추가 및 날짜순 정렬 유지)
     with tabs[5]:
         st.subheader("⏳ 타임라인")
         with st.form("t_form", clear_on_submit=True):
@@ -620,8 +621,38 @@ if check_login_and_user():
                 
         # 타임라인을 날짜 기준 내림차순(최신순)으로 정렬하여 출력
         sorted_timeline = sorted(st.session_state.timeline, key=lambda x: x.get('date', ''), reverse=True)
-        for t in sorted_timeline:
-            st.markdown(f"<div class='card'><b>{t.get('date','')}</b>: {t.get('event','')}</div>", unsafe_allow_html=True)
+        for i, t in enumerate(sorted_timeline):
+            with st.container():
+                st.markdown(f"<div class='card'><b>{t.get('date','')}</b>: {t.get('event','')}</div>", unsafe_allow_html=True)
+                with st.expander("✏️ 수정 및 삭제"):
+                    try:
+                        orig_d_obj = datetime.datetime.strptime(t.get('date', today_str), "%Y-%m-%d").date()
+                    except:
+                        orig_d_obj = now_kst.date()
+                        
+                    new_td = st.date_input("날짜 수정", value=orig_d_obj, key=f"edit_td_{i}")
+                    new_te = st.text_input("내용 수정", value=t.get('event', ''), key=f"edit_te_{i}")
+                    
+                    c1, c2 = st.columns(2)
+                    if c1.button("💾 수정 저장", key=f"edit_btn_{i}"):
+                        target_d = t.get('date'); target_e = t.get('event')
+                        remote_t = get_chunked_data(services["time"], [])
+                        for idx, rem_t in enumerate(remote_t):
+                            if rem_t.get('date') == target_d and rem_t.get('event') == target_e:
+                                remote_t[idx]['date'] = str(new_td)
+                                remote_t[idx]['event'] = new_te
+                                break
+                        st.session_state.timeline = remote_t
+                        save_large_data("time", remote_t); st.rerun()
+                        
+                    if c2.button("🗑️ 삭제", key=f"del_btn_{i}"):
+                        target_d = t.get('date'); target_e = t.get('event')
+                        remote_t = get_chunked_data(services["time"], [])
+                        for idx, rem_t in enumerate(remote_t):
+                            if rem_t.get('date') == target_d and rem_t.get('event') == target_e:
+                                remote_t.pop(idx); break
+                        st.session_state.timeline = remote_t
+                        save_large_data("time", remote_t); st.rerun()
 
     # 7. 📍 장소/기록
     with tabs[6]:
