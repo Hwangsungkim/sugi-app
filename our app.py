@@ -299,7 +299,7 @@ if check_login_and_user():
             save_large_data("main", rm); st.rerun()
 
     # ==========================================
-    # 🚨 9개 탭 구성 (시즌 2 문답 & 텔레파시 업데이트 완료)
+    # 🚨 9개 탭 구성
     # ==========================================
     tabs = st.tabs(["💕 데이트", "💌 쪽지함", "🌸 텔레파시", "🎵 주크박스", "📸 추억저장소", "⏳ 타임라인", "📍 장소/기록", "🎁 타임캡슐", "🎡 만능룰렛"])
 
@@ -311,7 +311,7 @@ if check_login_and_user():
             with st.expander("열어보기"):
                 for p in past_records: st.info(f"[{p['date']}] {p['user']}: {p['content']}")
 
-        # 🚨 [문답 시즌 2] 1번 ~ 160번 전면 확장 데이터 (기존 기록 100% 보존)
+        # 🚨 [문답 시즌 2] 1번 ~ 160번 전면 확장 데이터
         qna_list = [
             "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?", "3. 내가 가장 사랑스러워 보일 때는 언제야?", "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?", "5. 지금 당장 훌쩍 떠난다면 같이 가고 싶은 여행지는?",
             "6. 지금까지 우리의 가장 완벽했던 데이트는 언제였어?", "7. 우리의 첫 키스(뽀뽀) 때 어떤 기분이었어?", "8. 내가 해준 음식 중 최고의 메뉴는?", "9. 서로의 연락처 저장명과 그렇게 정한 이유는 뭐야?", "10. 화났을 때 내 기분을 100% 풀어주는 최고의 방법은?",
@@ -329,8 +329,7 @@ if check_login_and_user():
             "66. 상대방의 잠자는 모습을 처음 봤을 때 어떤 생각이 들었어?", "67. 나의 콤플렉스 중 네가 가장 사랑해 줄 수 있는 것은?", "68. 나랑 같이 장을 본다면 카트에 가장 먼저 담을 물건은?", "69. 우리가 만약 같은 직장에서 일한다면 어떤 모습일까?", "70. 상대방의 삐진 모습을 가장 빨리 풀어줄 수 있는 음식은?",
             "71. 나랑 같이 해보고 싶은 커플 챌린지가 있다면?", "72. 내 핸드폰 배경화면으로 해놓고 싶은 내 사진은?", "73. 만약 내가 기억 상실증에 걸린다면 나한테 어떻게 다가올 거야?", "74. 나랑 같이 만들어보고 싶은 커플 아이템(반지, 향수 등)은?", "75. 상대방의 요리 실력을 10점 만점으로 평가한다면?",
             "76. 나랑 같이 꼭 타보고 싶은 놀이기구는?", "77. 나의 어떤 점이 가장 든든하고 의지가 돼?", "78. 나랑 같이 꼭 해보고 싶은 봉사활동이나 의미 있는 일은?", "79. 만약 내가 연예인이 된다면 어떤 반응을 보일 거야?", "80. 지금 이 순간, 나한테 가장 해주고 싶은 짧은 한마디는?",
-            
-            # --- 여기서부터 시즌 2 (81~160) ---
+            # --- 시즌 2 (81~160) ---
             "81. 우리가 함께 살 집을 꾸민다면 가장 공들이고 싶은 공간은 어디야?", "82. 상대방을 생각할 때 떠오르는 나만의 소울푸드가 있다면?", "83. 주말 아침에 눈을 떴을 때 가장 먼저 같이 하고 싶은 일은?", "84. 우리가 처음으로 같이 1박 이상 여행을 갔던 날, 가장 기억에 남는 장면은?", "85. 스트레스를 너무 많이 받은 날, 내가 너에게 어떻게 해줬으면 좋겠어?",
             "86. 나를 만나기 전과 후, 스스로 생각하기에 가장 크게 달라진 점은 뭐야?", "87. 우리가 만약 예능 프로그램에 나간다면 어떤 성격의 커플로 비칠까?", "88. 나 몰래 준비하다가 들킬 뻔했던 깜찍한 일화가 있다면?", "89. 나의 스킨십 중 '이건 진짜 반칙이다' 싶을 정도로 설레는 행동은?", "90. 우리가 길에서 우연히 옛날 친구를 만난다면 나를 어떻게 소개할 거야?",
             "91. 100억 로또에 당첨된다면 우리의 첫 번째 플렉스는 무엇일까?", "92. 살면서 서로에게 절대 들키고 싶지 않은 아주 사소한 비밀이 있다면?", "93. 만약 우리가 타임머신을 타고 과거로 돌아간다면 언제로 가서 뭘 하고 싶어?", "94. 나를 보면서 '이 사람은 진짜 내 편이구나'라고 뼛속 깊이 느꼈던 순간은?", "95. 내가 평소에 자주 쓰는 말이나 입버릇 중에 가장 귀엽다고 생각하는 건?",
@@ -349,13 +348,13 @@ if check_login_and_user():
             "156. 내가 너의 머리를 쓰다듬어 주거나 등을 토닥여 줄 때 어떤 기분이 들어?", "157. 만약 우리가 하루 동안 스마트폰 없이 데이트를 한다면 짜증이 날까, 아니면 더 좋을까?", "158. 나에게 꼭 받아보고 싶은 깜짝 이벤트나 프로포즈 로망이 있다면?", "159. 지금까지 우리가 함께한 모든 날을 한 문장으로 요약한다면?", "160. 다음 1년 동안 나랑 꼭 이루고 싶은 우리만의 버킷리스트 1위는 뭐야?"
         ]
         
-        # 🚨 [시즌 2 트리거 로직] - 내일(2026-06-06)부터 정확히 81번(index 80)으로 시작되도록 핀셋 교정
+        # 🚨 [시즌 2 트리거 로직] 내일(2026-06-06)부터 정확히 81번(index 80)으로 시작
         season2_start_ord = datetime.date(2026, 6, 6).toordinal()
         today_ord = now_kst.toordinal()
         if today_ord >= season2_start_ord:
-            q_idx = 80 + ((today_ord - season2_start_ord) % 80) # 80~159 루프
+            q_idx = 80 + ((today_ord - season2_start_ord) % 80)
         else:
-            q_idx = today_ord % 80 # 오늘까지는 원래의 루프 (13번 등) 유지
+            q_idx = today_ord % 80
             
         q_key = f"qna_{q_idx}"
         st.session_state.qna_data.setdefault(q_key, {"hodl": "", "sugi": ""})
@@ -412,13 +411,9 @@ if check_login_and_user():
                 new_rec[f"{user_name_only}_score"] = m_score[my_mood]
                 r_hist.append(new_rec)
                 
-            rm["moods"] = r_moods
-            rm["mood_history"] = r_hist
-            rm["current_mood_date"] = today_str
-            st.session_state.moods = r_moods
-            st.session_state.mood_history = r_hist
-            save_large_data("main", rm)
-            st.rerun()
+            rm["moods"] = r_moods; rm["mood_history"] = r_hist; rm["current_mood_date"] = today_str
+            st.session_state.moods = r_moods; st.session_state.mood_history = r_hist
+            save_large_data("main", rm); st.rerun()
 
         b_md = st.session_state.moods.get('수기남자친구', '🙂')
         g_md = st.session_state.moods.get('수기', '🙂')
@@ -462,7 +457,6 @@ if check_login_and_user():
             for idx, m in enumerate(remote_m):
                 if m.get('date') == today_str and m.get('user') == user_name_only:
                     existing_idx = idx; break
-            
             if existing_idx != -1:
                 remote_m[existing_idx]['content'] = content
                 remote_m[existing_idx]['time'] = current_time_str
@@ -479,7 +473,7 @@ if check_login_and_user():
         if len(st.session_state.memo_history) > st.session_state.memo_limit:
             if st.button("더 보기 ⬇️"): st.session_state.memo_limit += 10; st.rerun()
 
-    # 3. 🌸 텔레파시 (🚨 100% 리얼 현실 밀착형 커플 밸런스 게임 리뉴얼)
+    # 3. 🌸 텔레파시 (🚨 100% 리얼 현실 밀착형 커플 밸런스 게임 100제)
     with tabs[2]:
         st.subheader("🌸 오늘의 텔레파시")
         tele_qs = [
@@ -613,7 +607,7 @@ if check_login_and_user():
         if len(photos) >= st.session_state.photo_limit:
             if st.button("⬇️ 과거 사진 더 보기"): st.session_state.photo_limit += 20; st.rerun()
 
-    # 6. ⏳ 타임라인
+    # 6. ⏳ 타임라인 (🚨 수정 완료: 무조건 날짜 최신순 강제 정렬)
     with tabs[5]:
         st.subheader("⏳ 타임라인")
         with st.form("t_form", clear_on_submit=True):
@@ -623,7 +617,10 @@ if check_login_and_user():
                 remote_t.insert(0, {"date": str(td), "event": te, "by": user_name_only})
                 st.session_state.timeline = remote_t
                 save_large_data("time", remote_t); st.rerun()
-        for t in st.session_state.timeline:
+                
+        # 타임라인을 날짜 기준 내림차순(최신순)으로 정렬하여 출력
+        sorted_timeline = sorted(st.session_state.timeline, key=lambda x: x.get('date', ''), reverse=True)
+        for t in sorted_timeline:
             st.markdown(f"<div class='card'><b>{t.get('date','')}</b>: {t.get('event','')}</div>", unsafe_allow_html=True)
 
     # 7. 📍 장소/기록
