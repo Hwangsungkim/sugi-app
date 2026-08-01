@@ -333,7 +333,7 @@ if check_login_and_user():
             "81. 우리가 함께 살 집을 꾸민다면 가장 공들이고 싶은 공간은 어디야?", "82. 상대방을 생각할 때 떠오르는 나만의 소울푸드가 있다면?", "83. 주말 아침에 눈을 떴을 때 가장 먼저 같이 하고 싶은 일은?", "84. 우리가 처음으로 같이 1박 이상 여행을 갔던 날, 가장 기억에 남는 장면은?", "85. 스트레스를 너무 많이 받은 날, 내가 너에게 어떻게 해줬으면 좋겠어?",
             "86. 나를 만나기 전과 후, 스스로 생각하기에 가장 크게 달라진 점은 뭐야?", "87. 우리가 만약 예능 프로그램에 나간다면 어떤 성격의 커플로 비칠까?", "88. 나 몰래 준비하다가 들킬 뻔했던 깜찍한 일화가 있다면?", "89. 나의 스킨십 중 '이건 진짜 반칙이다' 싶을 정도로 설레는 행동은?", "90. 우리가 길에서 우연히 옛날 친구를 만난다면 나를 어떻게 소개할 거야?",
             "91. 100억 로또에 당첨된다면 우리의 첫 번째 플렉스는 무엇일까?", "92. 살면서 서로에게 절대 들키고 싶지 않은 아주 사소한 비밀이 있다면?", "93. 만약 우리가 타임머신을 타고 과거로 돌아간다면 언제로 가서 뭘 하고 싶어?", "94. 나를 보면서 '이 사람은 진짜 내 편이구나'라고 뼛속 깊이 느꼈던 순간은?", "95. 내가 평소에 자주 쓰는 말이나 입버릇 중에 가장 귀엽다고 생각하는 건?",
-            "96. 서로의 경제관념(돈 쓰는 방식)에 대해 솔직하게 어떻게 생각해?", "97. 우리가 나중에 강아지나 고양이를 키운다면 이름을 뭐라고 짓고 싶어?", "98. 상대방이 가장 섹시해 보이는 찰나의 표정이나 눈빛은?", "99. 지금까지 함께 찍은 사진 중 당장 액자로 뽑아서 걸어두고 싶은 사진은?", "100. 나랑 같이 밤새 술 마시면서 허심탄회하게 털어놓고 싶은 이야기가 있다면?",
+            "96. 서로의 경제관념(돈 쓰는 방식)에 대해 솔직하게 어떻게 생각해?", "97. 우리가 나중에 강아지나 고양이를 키운다면 이름을 뭐라고 짓고 싶어?", "98. 상대방이 가장 섹시해 보이는 찰나의 표정이나 눈빛은?", "99. 지금까지 함께 찍은 사진 중 당장 액자로 뽑아서 걸어두고 싶은 사진은?", "100. 나랑 같이 밤새 술 마시 편집하면서 허심탄회하게 털어놓고 싶은 이야기가 있다면?",
             "101. 우리가 아무리 바빠도 이것만큼은 서로의 일상에서 포기하지 말자고 정할 것은?", "102. 내가 아주 가끔 미워 보일 때, 그걸 어떻게 속으로 삭이고 넘겨?", "103. 상대방의 이름 삼행시로 세상에서 가장 달콤하게 마음을 표현해 본다면?", "104. 우리가 비행기를 타고 10시간 이상 가야 하는 곳으로 떠난다면 기내에서 뭘 할까?", "105. 나를 처음 봤을 때 속으로 했던 아주 솔직한 평가(점수)는 몇 점이었어?",
             "106. 살면서 가장 크게 울었던 날, 내 존재가 너에게 어떤 의미였어?", "107. 만약 내가 어느 날 짐을 싹 다 싸서 도망치자고 한다면 군말 없이 따라와 줄 거야?", "108. 나한테 가장 듣고 싶은 애칭이나 호칭이 있다면 뭐야?", "109. 서로의 부모님을 처음 뵈었을 때(혹은 뵐 때) 가장 떨렸던/떨릴 것 같은 포인트는?", "110. 내가 해주는 마사지나 안마 중에 제일 피로가 풀리는 부위는?",
             "111. 만약 내가 며칠 동안 아파서 누워있다면 나를 위해 뭘 해줄 수 있어?", "112. 상대방의 핸드폰에 내 번호를 다시 저장할 수 있다면 뭐라고 저장하고 싶어?", "113. 우리 연애의 '명장면'을 딱 하나만 꼽아서 영화 포스터로 만든다면?", "114. 만약 우리가 지금 당장 차를 끌고 야간 드라이브를 간다면 틀고 싶은 노래는?", "115. 서로의 취향 중 도저히 이해가 안 되지만 사랑으로 품어주는 것은?",
@@ -608,7 +608,7 @@ if check_login_and_user():
         if len(photos) >= st.session_state.photo_limit:
             if st.button("⬇️ 과거 사진 더 보기"): st.session_state.photo_limit += 20; st.rerun()
 
-    # 6. ⏳ 타임라인 (🚨 수정/삭제 기능 추가 및 날짜순 정렬 유지)
+    # 6. ⏳ 타임라인 (🚨 렌더링 방식 변경: 텍스트 클릭 시에만 창이 열림)
     with tabs[5]:
         st.subheader("⏳ 타임라인")
         with st.form("t_form", clear_on_submit=True):
@@ -622,37 +622,36 @@ if check_login_and_user():
         # 타임라인을 날짜 기준 내림차순(최신순)으로 정렬하여 출력
         sorted_timeline = sorted(st.session_state.timeline, key=lambda x: x.get('date', ''), reverse=True)
         for i, t in enumerate(sorted_timeline):
-            with st.container():
-                st.markdown(f"<div class='card'><b>{t.get('date','')}</b>: {t.get('event','')}</div>", unsafe_allow_html=True)
-                with st.expander("✏️ 수정 및 삭제"):
-                    try:
-                        orig_d_obj = datetime.datetime.strptime(t.get('date', today_str), "%Y-%m-%d").date()
-                    except:
-                        orig_d_obj = now_kst.date()
-                        
-                    new_td = st.date_input("날짜 수정", value=orig_d_obj, key=f"edit_td_{i}")
-                    new_te = st.text_input("내용 수정", value=t.get('event', ''), key=f"edit_te_{i}")
+            # 🚨 이전의 복잡한 이중 컨테이너를 없애고 심플하게 통합
+            with st.expander(f"🕰️ {t.get('date','')} : {t.get('event','')}"):
+                try:
+                    orig_d_obj = datetime.datetime.strptime(t.get('date', today_str), "%Y-%m-%d").date()
+                except:
+                    orig_d_obj = now_kst.date()
                     
-                    c1, c2 = st.columns(2)
-                    if c1.button("💾 수정 저장", key=f"edit_btn_{i}"):
-                        target_d = t.get('date'); target_e = t.get('event')
-                        remote_t = get_chunked_data(services["time"], [])
-                        for idx, rem_t in enumerate(remote_t):
-                            if rem_t.get('date') == target_d and rem_t.get('event') == target_e:
-                                remote_t[idx]['date'] = str(new_td)
-                                remote_t[idx]['event'] = new_te
-                                break
-                        st.session_state.timeline = remote_t
-                        save_large_data("time", remote_t); st.rerun()
-                        
-                    if c2.button("🗑️ 삭제", key=f"del_btn_{i}"):
-                        target_d = t.get('date'); target_e = t.get('event')
-                        remote_t = get_chunked_data(services["time"], [])
-                        for idx, rem_t in enumerate(remote_t):
-                            if rem_t.get('date') == target_d and rem_t.get('event') == target_e:
-                                remote_t.pop(idx); break
-                        st.session_state.timeline = remote_t
-                        save_large_data("time", remote_t); st.rerun()
+                new_td = st.date_input("날짜 수정", value=orig_d_obj, key=f"edit_td_{i}")
+                new_te = st.text_input("내용 수정", value=t.get('event', ''), key=f"edit_te_{i}")
+                
+                c1, c2 = st.columns(2)
+                if c1.button("💾 수정 저장", key=f"edit_btn_{i}"):
+                    target_d = t.get('date'); target_e = t.get('event')
+                    remote_t = get_chunked_data(services["time"], [])
+                    for idx, rem_t in enumerate(remote_t):
+                        if rem_t.get('date') == target_d and rem_t.get('event') == target_e:
+                            remote_t[idx]['date'] = str(new_td)
+                            remote_t[idx]['event'] = new_te
+                            break
+                    st.session_state.timeline = remote_t
+                    save_large_data("time", remote_t); st.rerun()
+                    
+                if c2.button("🗑️ 삭제", key=f"del_btn_{i}"):
+                    target_d = t.get('date'); target_e = t.get('event')
+                    remote_t = get_chunked_data(services["time"], [])
+                    for idx, rem_t in enumerate(remote_t):
+                        if rem_t.get('date') == target_d and rem_t.get('event') == target_e:
+                            remote_t.pop(idx); break
+                    st.session_state.timeline = remote_t
+                    save_large_data("time", remote_t); st.rerun()
 
     # 7. 📍 장소/기록
     with tabs[6]:
