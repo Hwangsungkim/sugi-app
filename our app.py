@@ -111,7 +111,7 @@ def delete_photo_from_drive(file_id):
     except: return False
 
 # ==========================================
-# ⚡️ 데이터 엔진 (청크 분산 처리 & 렉 유발 데이터 삭제)
+# ⚡️ 데이터 엔진 (청크 분산 처리)
 # ==========================================
 def get_chunked_data(sheet_obj, default_val):
     if not sheet_obj: return default_val
@@ -135,9 +135,19 @@ def save_large_data(sheet_key, data):
 
 def load_data():
     main_data = get_chunked_data(services["main"], {})
+    
+    # 🚨 일일톡톡 자정 리셋 로직
+    dt_date = main_data.get("daily_talk_date", today_str)
+    dt_talk = main_data.get("daily_talk", [])
+    if dt_date != today_str:
+        dt_talk = []
+        dt_date = today_str
+
     return {
         "notice": main_data.get("notice", "오늘 하루도 화이팅! ✨"),
         "promises": main_data.get("promises", [{"text": "서운한 건 그날 바로 말하기 🗣️", "by": "수기남자친구"}]),
+        "daily_talk": dt_talk,
+        "daily_talk_date": dt_date,
         "menu_list": main_data.get("menu_list", ["삼겹살", "초밥"]),
         "memo_history": get_chunked_data(services["memo"], []),
         "timeline": get_chunked_data(services["time"], []),
@@ -211,7 +221,7 @@ if check_login_and_user():
     st.markdown(f"<div style='position: fixed; top: 15px; right: 25px; font-size: 2.8rem; z-index: 999999; text-shadow: 2px 2px 4px rgba(0,0,0,0.1);'>{weather_emoji}</div>", unsafe_allow_html=True)
 
     # ==========================================
-    # 🌱 사이드바 완벽 복구
+    # 🌱 사이드바 
     # ==========================================
     total_act = len(st.session_state.memo_history) + len(st.session_state.timeline) + len(st.session_state.reviews)
     level, tree_icon = ("풍성한 나무", "🍎") if total_act >= 70 else (("아기 나무", "🌳") if total_act >= 30 else (("새싹", "🌿") if total_act >= 10 else ("씨앗", "🌱")))
@@ -301,7 +311,7 @@ if check_login_and_user():
             with st.expander("열어보기"):
                 for p in past_records: st.info(f"[{p['date']}] {p['user']}: {p['content']}")
 
-        # 🚨 [문답 시즌 2] 1번 ~ 160번 전면 확장 데이터
+        # 🚨 [문답 시즌 2]
         qna_list = [
             "1. 우리가 처음 만났던 날, 서로의 첫인상은 어땠어?", "2. 서로에게 가장 반했던 결정적인 순간은 언제야?", "3. 내가 가장 사랑스러워 보일 때는 언제야?", "4. 나의 잠버릇이나 술버릇 중 가장 귀여운 것은?", "5. 지금 당장 훌쩍 떠난다면 같이 가고 싶은 여행지는?",
             "6. 지금까지 우리의 가장 완벽했던 데이트는 언제였어?", "7. 우리의 첫 키스(뽀뽀) 때 어떤 기분이었어?", "8. 내가 해준 음식 중 최고의 메뉴는?", "9. 서로의 연락처 저장명과 그렇게 정한 이유는 뭐야?", "10. 화났을 때 내 기분을 100% 풀어주는 최고의 방법은?",
@@ -321,7 +331,7 @@ if check_login_and_user():
             "76. 나랑 같이 꼭 타보고 싶은 놀이기구는?", "77. 나의 어떤 점이 가장 든든하고 의지가 돼?", "78. 나랑 같이 꼭 해보고 싶은 봉사활동이나 의미 있는 일은?", "79. 만약 내가 연예인이 된다면 어떤 반응을 보일 거야?", "80. 지금 이 순간, 나한테 가장 해주고 싶은 짧은 한마디는?",
             # --- 시즌 2 (81~160) ---
             "81. 우리가 함께 살 집을 꾸민다면 가장 공들이고 싶은 공간은 어디야?", "82. 상대방을 생각할 때 떠오르는 나만의 소울푸드가 있다면?", "83. 주말 아침에 눈을 떴을 때 가장 먼저 같이 하고 싶은 일은?", "84. 우리가 처음으로 같이 1박 이상 여행을 갔던 날, 가장 기억에 남는 장면은?", "85. 스트레스를 너무 많이 받은 날, 내가 너에게 어떻게 해줬으면 좋겠어?",
-            "86. 나를 만나기 전과 후, 스스로 생각하기에 가장 크게 달라진 점은 뭐야?", "87. 우리가 만약 예능 프로그램에 나간다면 어떤 성격의 커플로 비칠까?", "88. 나 몰래 준비하다가 들킬 뻔했던 깜찍 일화가 있다면?", "89. 나의 스킨십 중 '이건 진짜 반칙이다' 싶을 정도로 설레는 행동은?", "90. 우리가 길에서 우연히 옛날 친구를 만난다면 나를 어떻게 소개할 거야?",
+            "86. 나를 만나기 전과 후, 스스로 생각하기에 가장 크게 달라진 점은 뭐야?", "87. 우리가 만약 예능 프로그램에 나간다면 어떤 성격의 커플로 비칠까?", "88. 나 몰래 준비하다가 들킬 뻔했던 깜찍한 일화가 있다면?", "89. 나의 스킨십 중 '이건 진짜 반칙이다' 싶을 정도로 설레는 행동은?", "90. 우리가 길에서 우연히 옛날 친구를 만난다면 나를 어떻게 소개할 거야?",
             "91. 100억 로또에 당첨된다면 우리의 첫 번째 플렉스는 무엇일까?", "92. 살면서 서로에게 절대 들키고 싶지 않은 아주 사소한 비밀이 있다면?", "93. 만약 우리가 타임머신을 타고 과거로 돌아간다면 언제로 가서 뭘 하고 싶어?", "94. 나를 보면서 '이 사람은 진짜 내 편이구나'라고 뼛속 깊이 느꼈던 순간은?", "95. 내가 평소에 자주 쓰는 말이나 입버릇 중에 가장 귀엽다고 생각하는 건?",
             "96. 서로의 경제관념(돈 쓰는 방식)에 대해 솔직하게 어떻게 생각해?", "97. 우리가 나중에 강아지나 고양이를 키운다면 이름을 뭐라고 짓고 싶어?", "98. 상대방이 가장 섹시해 보이는 찰나의 표정이나 눈빛은?", "99. 지금까지 함께 찍은 사진 중 당장 액자로 뽑아서 걸어두고 싶은 사진은?", "100. 나랑 같이 밤새 술 마시면서 허심탄회하게 털어놓고 싶은 이야기가 있다면?",
             "101. 우리가 아무리 바빠도 이것만큼은 서로의 일상에서 포기하지 말자고 정할 것은?", "102. 내가 아주 가끔 미워 보일 때, 그걸 어떻게 속으로 삭이고 넘겨?", "103. 상대방의 이름 삼행시로 세상에서 가장 달콤하게 마음을 표현해 본다면?", "104. 우리가 비행기를 타고 10시간 이상 가야 하는 곳으로 떠난다면 기내에서 뭘 할까?", "105. 나를 처음 봤을 때 속으로 했던 아주 솔직한 평가(점수)는 몇 점이었어?",
@@ -338,7 +348,6 @@ if check_login_and_user():
             "156. 내가 너의 머리를 쓰다듬어 주거나 등을 토닥여 줄 때 어떤 기분이 들어?", "157. 만약 우리가 하루 동안 스마트폰 없이 데이트를 한다면 짜증이 날까, 아니면 더 좋을까?", "158. 나에게 꼭 받아보고 싶은 깜짝 이벤트나 프로포즈 로망이 있다면?", "159. 지금까지 우리가 함께한 모든 날을 한 문장으로 요약한다면?", "160. 다음 1년 동안 나랑 꼭 이루고 싶은 우리만의 버킷리스트 1위는 뭐야?"
         ]
         
-        # 🚨 [시즌 2 트리거 로직] 내일(2026-06-06)부터 정확히 81번(index 80)으로 시작
         season2_start_ord = datetime.date(2026, 6, 6).toordinal()
         today_ord = now_kst.toordinal()
         if today_ord >= season2_start_ord:
@@ -382,28 +391,55 @@ if check_login_and_user():
                 st.rerun()
 
         st.divider()
+
+        # 🚨 [신규 기능] 일일톡톡 (Talk, Talk) 이식 완료
+        st.subheader("💬 일일톡톡 (Talk, Talk)")
+        st.caption("자정이 지나면 펑! 사라지는 오늘 우리만의 핑퐁 대화 🏓")
         
-        # 🚨 [신규 기능 이식] 무거운 기분 점수 삭제 및 가벼운 커플 미션(일일 퀘스트) 추가
-        st.subheader("🎯 오늘의 소소한 커플 미션")
-        mission_list = [
-            "오늘 하루 가장 예뻤던 하늘이나 풍경 사진 찍어서 톡으로 보내기 ☁️", "서로의 카톡 프로필/배경화면을 상대방이 지정해 주는 사진으로 하루 동안 바꾸기 📱", "뜬금없이 전화해서 '그냥 목소리 듣고 싶어서 전화했어'라고 말하기 📞", "오늘 서로에게 가장 고마웠던 점 딱 1개씩 자기 전에 카톡 남기기 💌", "상대방 이름으로 달달한 혹은 웃긴 삼행시 지어서 보내기 📝",
-            "다음 데이트 때 상대방이 입고 나왔으면 하는 옷 스타일 구체적으로 말해주기 👕👗", "지금 당장 생각나는 상대방의 가장 섹시한/멋진 포인트 하나 칭찬하기 🔥", "오늘 하루 가장 맛있게 먹은 음식 사진 찍어서 자랑하기 🍱", "서로가 가장 좋아하는 동물 이모티콘 3개만 써서 대화해 보기 🐶🐱", "서로의 매력 포인트 3가지 연속으로 카톡 보내기 ✨",
-            "오늘 있었던 일 중 가장 어이없었거나 웃겼던 일 하나 공유하기 😂", "잠들기 전, 서로에게 '오늘도 내 애인이라서 고마워'라고 속삭여주기 🌙", "상대방을 생각하며 들은 노래 1곡 유튜브 링크로 보내주기 🎵", "가장 최근에 같이 찍은 사진 보면서 그때 기분 어땠는지 얘기하기 📸", "오늘 저녁 서로의 야식 메뉴 골라주기 (무조건 먹어야 함!) 🍕",
-            "서로 처음 손잡았던 날의 기분, 다시 한번 생생하게 묘사해 보기 🤝", "오늘 퇴근/하교길에 마주친 길고양이, 강아지, 혹은 귀여운 것 사진 공유하기 🐾", "서로의 엽기적인 무보정 셀카 1장씩 교환하기 🤪", "서로에게 듣고 싶은 애칭 3번 연속으로 불러달라고 조르기 🥰", "1분 동안 오직 초성으로만 대화해서 상대방 당황시키기 💬",
-            "오늘 하루 가장 피곤했던 순간 말하고 서로 토닥토닥 위로해 주기 🫂", "서로의 장점 중 '이것만큼은 내가 평생 닮고 싶다' 하는 것 말해주기 🌟", "다음 주말에 무조건 해야 할 데이트 코스 1개씩 제안하기 🗺️", "지금 당장 서로에게 가장 해주고 싶은 스킨십 말하기 💋", "오늘 하루 내 감정을 날씨로 표현해서 카톡으로 보내기 🌦️",
-            "서로가 찍어준 사진 중 가장 잘 나왔다고 생각하는 베스트 컷 보내기 🖼️", "갑자기 '사랑해'라고 카톡 보내고 상대방 반응 캡처하기 ❤️", "오늘 가장 많이 한 생각이나 고민 딱 하나만 솔직하게 털어놓기 🧠", "만약 지금 당장 텔레포트를 할 수 있다면 어디로 가고 싶은지 말하기 🚀", "상대방이 나를 위해 해줬던 행동 중 가장 감동이었던 것 다시 꺼내기 🎁",
-            "오늘따라 상대방이 더 보고 싶은 이유 한 가지 말해주기 🥺", "서로의 목소리로 '사랑해' 녹음해서 음성 메시지로 남기기 🎙️", "이번 주에 먹고 싶은 배달 음식 하나 정해서 약속잡기 🍔", "상대방의 얼굴 부위 중 내가 가장 좋아하는 곳 짚어주기 👀", "오늘 하루 가장 많이 웃었던 이유 서로에게 말해주기 😄",
-            "우리가 처음 만났을 때, 첫인상 점수가 몇 점이었는지 솔직하게 밝히기 💯", "상대방에게 평소 궁금했지만 쑥스러워서 못 물어봤던 질문 1개 하기 ❓", "지금 가장 먹고 싶은 달콤한 디저트 3가지 말하고 침 흘리기 🍰", "상대방이 곁에 있어서 다행이라고 느꼈던 위기의 순간 회상하기 🛡️", "오늘 서로의 하루 점수를 10점 만점으로 평가하고 피드백 해주기 📊",
-            "서로의 단점 중 내가 귀엽게 넘겨줄 수 있는 하나 말해주기 🙈", "오늘 가장 즐겨 들었던 노래 가사 중 한 구절 보내주기 🎶", "만약 우리가 로또 1등에 당첨되면 가장 먼저 뭘 할지 상상하기 💰", "상대방이 해준 밥/요리 중 가장 생각나는 메뉴 말하기 🍳", "오늘 잠들기 전 5분 동안 꼭 통화하면서 자장가 불러주기 💤",
-            "서로의 폰에 저장된 이름, 하루 동안 엄청 오글거리는 걸로 바꾸기 📱", "상대방에게 바라는 아주 작고 사소한 소원 1가지 말하기 🌠", "오늘 하루 서로가 서로에게 어떤 존재였는지 한 단어로 표현하기 🔑", "상대방이 예뻐/멋져 보일 때 나오는 나만의 무의식적인 반응 말하기 💓", "지금 당장 달려가서 꽉 껴안아 주고 싶다고 카톡 보내기 🏃‍♂️🏃‍♀️"
-        ]
-        m_idx = now_kst.toordinal() % len(mission_list)
-        st.info(f"**{mission_list[m_idx]}**")
-        if st.button("✅ 미션 완료! 💖", use_container_width=True):
-            st.balloons()
-            st.success("미션 클리어! 우리 사랑나무가 한 뼘 더 자랐어요 🌳✨")
-        
+        chat_html = "<div style='background: rgba(255,255,255,0.5); padding: 15px; border-radius: 15px; max-height: 400px; overflow-y: auto; margin-bottom: 15px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);'>"
+        if not st.session_state.daily_talk:
+            chat_html += "<p style='text-align:center; color:gray; font-size: 0.9em;'>오늘의 첫 톡을 남겨보세요! ✨</p>"
+        else:
+            for msg in st.session_state.daily_talk:
+                is_me = (msg['user'] == user_name_only)
+                align = "right" if is_me else "left"
+                bg = "rgba(75,137,255,0.15)" if msg['user'] == "수기남자친구" else "rgba(255,133,162,0.15)"
+                chat_html += f"<div style='text-align: {align}; margin-bottom: 10px;'><div style='display: inline-block; text-align: left; background: {bg}; padding: 10px 15px; border-radius: 15px; max-width: 85%; line-height: 1.4;'><b style='font-size: 0.85em; color: gray;'>{msg['user']}</b> <span style='font-size:0.7em; color:#999;'>{msg['time']}</span><br><span style='font-size: 1.05em;'>{msg['text']}</span></div></div>"
+        chat_html += "</div>"
+        st.markdown(chat_html, unsafe_allow_html=True)
+
+        can_write = True
+        if st.session_state.daily_talk:
+            if st.session_state.daily_talk[-1]['user'] == user_name_only:
+                can_write = False
+                
+        if can_write:
+            with st.form("talk_form", clear_on_submit=True):
+                cols = st.columns([0.8, 0.2])
+                new_t = cols[0].text_input("톡", label_visibility="collapsed", placeholder="메시지를 입력하세요...")
+                if cols[1].form_submit_button("전송 ✈️") and new_t:
+                    rm = get_chunked_data(services["main"], {})
+                    # 🚨 저장 직전 자정 리셋 방어막 2차 체크
+                    if rm.get("daily_talk_date") != today_str:
+                        r_talk = []
+                    else:
+                        r_talk = rm.get("daily_talk", [])
+                    
+                    # 🚨 동시접속 턴제 위반 방어막
+                    if not r_talk or r_talk[-1]['user'] != user_name_only:
+                        r_talk.append({"user": user_name_only, "text": new_t, "time": current_time_str})
+                        rm["daily_talk"] = r_talk
+                        rm["daily_talk_date"] = today_str
+                        st.session_state.daily_talk = r_talk
+                        st.session_state.daily_talk_date = today_str
+                        save_large_data("main", rm)
+                        st.rerun()
+        else:
+            other_name = "수기" if user_name_only == "수기남자친구" else "수기남자친구"
+            st.warning(f"⏳ **{other_name}**의 답장을 기다리는 중이에요! (나 한 번, 너 한 번 핑퐁 🏓)")
+
         st.divider()
+
         st.subheader("🗓️ 데이트 일정")
         with st.form("sch_form", clear_on_submit=True):
             sd = st.date_input("날짜"); sp = st.text_input("어디서 무얼 할까요?")
@@ -450,7 +486,7 @@ if check_login_and_user():
         if len(st.session_state.memo_history) > st.session_state.memo_limit:
             if st.button("더 보기 ⬇️"): st.session_state.memo_limit += 10; st.rerun()
 
-    # 3. 🌸 텔레파시 
+    # 3. 🌸 텔레파시
     with tabs[2]:
         st.subheader("🌸 오늘의 텔레파시")
         tele_qs = [
